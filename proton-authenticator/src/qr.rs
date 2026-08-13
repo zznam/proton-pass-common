@@ -21,8 +21,17 @@ pub fn parse_qr_code(input: &[u8]) -> Option<String> {
 
     let mut multi_format_reader = MultiFormatReader::default();
     let hints = get_hints();
+
+    let luminance_source = match Luma8LuminanceSource::new(luma, width, height) {
+        Ok(source) => source,
+        Err(e) => {
+            warn!("Error creating luminance source: {e:?}");
+            return None;
+        }
+    };
+
     match multi_format_reader.decode_with_hints(
-        &mut BinaryBitmap::new(HybridBinarizer::new(Luma8LuminanceSource::new(luma, width, height))),
+        &mut BinaryBitmap::new(HybridBinarizer::new(luminance_source)),
         &hints,
     ) {
         Ok(decoded) => Some(decoded.getText().to_string()),
