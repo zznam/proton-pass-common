@@ -12,6 +12,10 @@
 
 - pass-common: Improved file type detection using a Head-Tail-based scan.
 
+### Other
+
+- Dependency upgrades.
+
 ## 1.7.3
 
 ### Other
