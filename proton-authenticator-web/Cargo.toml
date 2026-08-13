@@ -11,8 +11,10 @@ pre-release-replacements = [
 
 # Needed since rust 1.87+
 # https://github.com/rustwasm/wasm-pack/issues/1501
+# --enable-simd needed since newer rustc versions enable the simd128 target feature by default
+# for wasm32-unknown-unknown (https://github.com/rust-lang/rust/pull/128918)
 [package.metadata.wasm-pack.profile.release]
-wasm-opt = ["--enable-bulk-memory", "--enable-nontrapping-float-to-int"]
+wasm-opt = ["-Oz", "--enable-bulk-memory", "--enable-nontrapping-float-to-int", "--enable-simd"]
 
 [lib]
 doctest = false
