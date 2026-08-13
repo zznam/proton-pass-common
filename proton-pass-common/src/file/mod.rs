@@ -1,7 +1,9 @@
 use file_format::FileFormat;
+use head_tail_reader::HeadTailReader;
 use proton_pass_derive::ffi_type;
 
 mod associations;
+mod head_tail_reader;
 
 // External file, do not complain about lint
 #[allow(dead_code)]
@@ -28,6 +30,12 @@ pub enum FileGroup {
 
 pub fn get_mime_type_from_content(input: &[u8]) -> String {
     let format = FileFormat::from_bytes(input);
+    adapt(format.media_type())
+}
+
+pub fn get_mime_type_from_head_and_tail(head: &[u8], tail: &[u8], total_len: u64) -> String {
+    let reader = HeadTailReader::new(head, tail, total_len);
+    let format = FileFormat::from_reader(reader).unwrap_or(FileFormat::ArbitraryBinaryData);
     adapt(format.media_type())
 }
 

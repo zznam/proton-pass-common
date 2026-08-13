@@ -348,12 +348,12 @@ mod tests {
             ];
             for (best_role, worse_role) in role_tests.iter() {
                 let best_role_share = share_builder()
-                    .share_id(&format!("a{:?}{}", &target_type, worse_role))
+                    .share_id(&format!("a{:?}{}", target_type, worse_role))
                     .target_type(target_type.clone())
                     .role(best_role)
                     .build();
                 let worse_role_share = share_builder()
-                    .share_id(&format!("b{:?}{}", &target_type, worse_role))
+                    .share_id(&format!("b{:?}{}", target_type, worse_role))
                     .target_type(target_type.clone())
                     .role(worse_role)
                     .build();

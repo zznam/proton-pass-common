@@ -1,4 +1,4 @@
-use proton_pass_common::file::get_mime_type_from_content;
+use proton_pass_common::file::{get_mime_type_from_content, get_mime_type_from_head_and_tail};
 
 fn get_file_contents(name: &str) -> Vec<u8> {
     let crate_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -40,4 +40,20 @@ mime_type_test! {
     ics: ("sample.ics", "text/calendar"),
     mp4: ("sample.mp4", "video/mp4"),
     avi: ("sample.avi", "video/avi"),
+}
+
+#[test]
+fn test_head_tail_seeker() {
+    let contents = get_file_contents("sample-big.xlsx");
+    // First 1.4MB
+    let head = &contents[0..1_468_000];
+
+    // Last 128kb
+    let tail = &contents[contents.len() - 128000..];
+
+    let format = get_mime_type_from_head_and_tail(head, tail, contents.len() as u64);
+    assert_eq!(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        format
+    );
 }
