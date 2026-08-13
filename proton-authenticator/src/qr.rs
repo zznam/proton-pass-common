@@ -30,10 +30,8 @@ pub fn parse_qr_code(input: &[u8]) -> Option<String> {
         }
     };
 
-    match multi_format_reader.decode_with_hints(
-        &mut BinaryBitmap::new(HybridBinarizer::new(luminance_source)),
-        &hints,
-    ) {
+    match multi_format_reader.decode_with_hints(&mut BinaryBitmap::new(HybridBinarizer::new(luminance_source)), &hints)
+    {
         Ok(decoded) => Some(decoded.getText().to_string()),
         Err(e) => {
             warn!("Error decoding QR code: {:?}", e);
