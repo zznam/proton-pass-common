@@ -6,6 +6,12 @@
 
 ### Other
 
+## 1.8.0
+
+### Features :tada:
+
+- pass-common: Improved file type detection using a Head-Tail-based scan.
+
 ## 1.7.3
 
 ### Other
