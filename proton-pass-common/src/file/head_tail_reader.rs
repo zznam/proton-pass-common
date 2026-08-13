@@ -31,7 +31,10 @@ impl Read for HeadTailReader<'_> {
 
         if self.pos < self.head.len() as u64 {
             let start = self.pos as usize;
-            let n = buf.len().min(self.head.len() - start);
+            let n = buf
+                .len()
+                .min(self.head.len() - start)
+                .min((self.total_len - self.pos) as usize);
             buf[..n].copy_from_slice(&self.head[start..start + n]);
             self.pos += n as u64;
             return Ok(n);
@@ -46,6 +49,10 @@ impl Read for HeadTailReader<'_> {
             return Ok(n);
         }
 
+        // Middle region not covered by `head` or `tail`: reported as EOF (Ok(0)), which is
+        // indistinguishable from a real end of stream. This reader is only meant for seek-based
+        // format sniffing (e.g. file_format's signature + ZIP central directory lookups), not
+        // for sequential reading of the full contents.
         Ok(0)
     }
 }
