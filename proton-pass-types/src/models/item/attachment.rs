@@ -20,7 +20,8 @@
 use crate::protos::file::file_v1;
 use anyhow::{Context, Result};
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[proton_pass_derive::ffi_id_type]
+#[derive(Clone, Debug)]
 pub struct AttachmentId(pub(crate) String);
 display_for_basic!(AttachmentId);
 
@@ -34,14 +35,16 @@ impl AttachmentId {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[proton_pass_derive::ffi_type]
+#[derive(Clone, Debug)]
 pub struct AttachmentChunk {
     pub chunk_id: String,
-    pub index: usize,
-    pub size: usize,
+    pub index: u64,
+    pub size: u64,
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[proton_pass_derive::ffi_type]
+#[derive(Clone, Debug)]
 pub struct ItemAttachment {
     pub id: AttachmentId,
     pub size: u64,
@@ -51,7 +54,8 @@ pub struct ItemAttachment {
     pub encrypted_file_key: Vec<u8>,
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[proton_pass_derive::ffi_type]
+#[derive(Clone, Debug)]
 pub struct ItemAttachmentContent {
     pub name: String,
     pub mime_type: String,

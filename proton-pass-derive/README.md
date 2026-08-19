@@ -74,6 +74,19 @@ pub enum MyError {
 }
 ```
 
+### `#[ffi_id_type]` - For Id Newtypes
+
+Use on single-field tuple structs that wrap a primitive (typically `String`) and act as a strongly typed id. Unlike `#[ffi_type]`, this does not derive `uniffi::Record` (which requires named fields); instead it registers the type as a uniffi custom newtype, so it's passed across the FFI boundary as its inner primitive while staying a distinct Rust type internally.
+
+**Basic Usage:**
+```rust
+use proton_pass_derive::ffi_id_type;
+
+#[ffi_id_type]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct MyId(pub(crate) String);
+```
+
 ### `#[ffi_object]` - For Objects/Classes
 
 Use on types that represent stateful objects in uniffi (not typically used with wasm).

@@ -642,6 +642,236 @@ impl ::protobuf::reflect::ProtobufValue for Passkey {
     type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
 }
 
+// @@protoc_insertion_point(message:proton_pass_item_v1.AutofillUrl)
+#[derive(PartialEq,Clone,Default,Debug)]
+pub struct AutofillUrl {
+    // message fields
+    // @@protoc_insertion_point(field:proton_pass_item_v1.AutofillUrl.url)
+    pub url: ::std::string::String,
+    // @@protoc_insertion_point(field:proton_pass_item_v1.AutofillUrl.mode)
+    pub mode: ::protobuf::EnumOrUnknown<autofill_url::Mode>,
+    // special fields
+    // @@protoc_insertion_point(special_field:proton_pass_item_v1.AutofillUrl.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a AutofillUrl {
+    fn default() -> &'a AutofillUrl {
+        <AutofillUrl as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl AutofillUrl {
+    pub fn new() -> AutofillUrl {
+        ::std::default::Default::default()
+    }
+
+    fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
+        let mut fields = ::std::vec::Vec::with_capacity(2);
+        let mut oneofs = ::std::vec::Vec::with_capacity(0);
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "url",
+            |m: &AutofillUrl| { &m.url },
+            |m: &mut AutofillUrl| { &mut m.url },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
+            "mode",
+            |m: &AutofillUrl| { &m.mode },
+            |m: &mut AutofillUrl| { &mut m.mode },
+        ));
+        ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<AutofillUrl>(
+            "AutofillUrl",
+            fields,
+            oneofs,
+        )
+    }
+}
+
+impl ::protobuf::Message for AutofillUrl {
+    const NAME: &'static str = "AutofillUrl";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.url = is.read_string()?;
+                },
+                16 => {
+                    self.mode = is.read_enum_or_unknown()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.url.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.url);
+        }
+        if self.mode != ::protobuf::EnumOrUnknown::new(autofill_url::Mode::Default) {
+            my_size += ::protobuf::rt::int32_size(2, self.mode.value());
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.url.is_empty() {
+            os.write_string(1, &self.url)?;
+        }
+        if self.mode != ::protobuf::EnumOrUnknown::new(autofill_url::Mode::Default) {
+            os.write_enum(2, ::protobuf::EnumOrUnknown::value(&self.mode))?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> AutofillUrl {
+        AutofillUrl::new()
+    }
+
+    fn clear(&mut self) {
+        self.url.clear();
+        self.mode = ::protobuf::EnumOrUnknown::new(autofill_url::Mode::Default);
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static AutofillUrl {
+        static instance: AutofillUrl = AutofillUrl {
+            url: ::std::string::String::new(),
+            mode: ::protobuf::EnumOrUnknown::from_i32(0),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+impl ::protobuf::MessageFull for AutofillUrl {
+    fn descriptor() -> ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::Lazy::new();
+        descriptor.get(|| file_descriptor().message_by_package_relative_name("AutofillUrl").unwrap()).clone()
+    }
+}
+
+impl ::std::fmt::Display for AutofillUrl {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for AutofillUrl {
+    type RuntimeType = ::protobuf::reflect::rt::RuntimeTypeMessage<Self>;
+}
+
+/// Nested message and enums of message `AutofillUrl`
+pub mod autofill_url {
+    #[derive(Clone,Copy,PartialEq,Eq,Debug,Hash)]
+    // @@protoc_insertion_point(enum:proton_pass_item_v1.AutofillUrl.Mode)
+    pub enum Mode {
+        // @@protoc_insertion_point(enum_value:proton_pass_item_v1.AutofillUrl.Mode.Default)
+        Default = 0,
+        // @@protoc_insertion_point(enum_value:proton_pass_item_v1.AutofillUrl.Mode.Exact)
+        Exact = 1,
+        // @@protoc_insertion_point(enum_value:proton_pass_item_v1.AutofillUrl.Mode.Never)
+        Never = 2,
+        // @@protoc_insertion_point(enum_value:proton_pass_item_v1.AutofillUrl.Mode.StartWith)
+        StartWith = 3,
+        // @@protoc_insertion_point(enum_value:proton_pass_item_v1.AutofillUrl.Mode.Pattern)
+        Pattern = 4,
+        // @@protoc_insertion_point(enum_value:proton_pass_item_v1.AutofillUrl.Mode.RegularExpression)
+        RegularExpression = 5,
+        // @@protoc_insertion_point(enum_value:proton_pass_item_v1.AutofillUrl.Mode.ExactPath)
+        ExactPath = 6,
+    }
+
+    impl ::protobuf::Enum for Mode {
+        const NAME: &'static str = "Mode";
+
+        fn value(&self) -> i32 {
+            *self as i32
+        }
+
+        fn from_i32(value: i32) -> ::std::option::Option<Mode> {
+            match value {
+                0 => ::std::option::Option::Some(Mode::Default),
+                1 => ::std::option::Option::Some(Mode::Exact),
+                2 => ::std::option::Option::Some(Mode::Never),
+                3 => ::std::option::Option::Some(Mode::StartWith),
+                4 => ::std::option::Option::Some(Mode::Pattern),
+                5 => ::std::option::Option::Some(Mode::RegularExpression),
+                6 => ::std::option::Option::Some(Mode::ExactPath),
+                _ => ::std::option::Option::None
+            }
+        }
+
+        fn from_str(str: &str) -> ::std::option::Option<Mode> {
+            match str {
+                "Default" => ::std::option::Option::Some(Mode::Default),
+                "Exact" => ::std::option::Option::Some(Mode::Exact),
+                "Never" => ::std::option::Option::Some(Mode::Never),
+                "StartWith" => ::std::option::Option::Some(Mode::StartWith),
+                "Pattern" => ::std::option::Option::Some(Mode::Pattern),
+                "RegularExpression" => ::std::option::Option::Some(Mode::RegularExpression),
+                "ExactPath" => ::std::option::Option::Some(Mode::ExactPath),
+                _ => ::std::option::Option::None
+            }
+        }
+
+        const VALUES: &'static [Mode] = &[
+            Mode::Default,
+            Mode::Exact,
+            Mode::Never,
+            Mode::StartWith,
+            Mode::Pattern,
+            Mode::RegularExpression,
+            Mode::ExactPath,
+        ];
+    }
+
+    impl ::protobuf::EnumFull for Mode {
+        fn enum_descriptor() -> ::protobuf::reflect::EnumDescriptor {
+            static descriptor: ::protobuf::rt::Lazy<::protobuf::reflect::EnumDescriptor> = ::protobuf::rt::Lazy::new();
+            descriptor.get(|| super::file_descriptor().enum_by_package_relative_name("AutofillUrl.Mode").unwrap()).clone()
+        }
+
+        fn descriptor(&self) -> ::protobuf::reflect::EnumValueDescriptor {
+            let index = *self as usize;
+            Self::enum_descriptor().value_by_index(index)
+        }
+    }
+
+    impl ::std::default::Default for Mode {
+        fn default() -> Self {
+            Mode::Default
+        }
+    }
+
+    impl Mode {
+        pub(in super) fn generated_enum_descriptor_data() -> ::protobuf::reflect::GeneratedEnumDescriptorData {
+            ::protobuf::reflect::GeneratedEnumDescriptorData::new::<Mode>("AutofillUrl.Mode")
+        }
+    }
+}
+
 // @@protoc_insertion_point(message:proton_pass_item_v1.ItemLogin)
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct ItemLogin {
@@ -658,6 +888,8 @@ pub struct ItemLogin {
     pub passkeys: ::std::vec::Vec<Passkey>,
     // @@protoc_insertion_point(field:proton_pass_item_v1.ItemLogin.item_username)
     pub item_username: ::std::string::String,
+    // @@protoc_insertion_point(field:proton_pass_item_v1.ItemLogin.autofill_urls)
+    pub autofill_urls: ::std::vec::Vec<AutofillUrl>,
     // special fields
     // @@protoc_insertion_point(special_field:proton_pass_item_v1.ItemLogin.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -675,7 +907,7 @@ impl ItemLogin {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(6);
+        let mut fields = ::std::vec::Vec::with_capacity(7);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "item_email",
@@ -706,6 +938,11 @@ impl ItemLogin {
             "item_username",
             |m: &ItemLogin| { &m.item_username },
             |m: &mut ItemLogin| { &mut m.item_username },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_vec_simpler_accessor::<_, _>(
+            "autofill_urls",
+            |m: &ItemLogin| { &m.autofill_urls },
+            |m: &mut ItemLogin| { &mut m.autofill_urls },
         ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<ItemLogin>(
             "ItemLogin",
@@ -743,6 +980,9 @@ impl ::protobuf::Message for ItemLogin {
                 50 => {
                     self.item_username = is.read_string()?;
                 },
+                58 => {
+                    self.autofill_urls.push(is.read_message()?);
+                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -774,6 +1014,10 @@ impl ::protobuf::Message for ItemLogin {
         if !self.item_username.is_empty() {
             my_size += ::protobuf::rt::string_size(6, &self.item_username);
         }
+        for value in &self.autofill_urls {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint64_size(len) + len;
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -798,6 +1042,9 @@ impl ::protobuf::Message for ItemLogin {
         if !self.item_username.is_empty() {
             os.write_string(6, &self.item_username)?;
         }
+        for v in &self.autofill_urls {
+            ::protobuf::rt::write_message_field_with_cached_size(7, v, os)?;
+        };
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -821,6 +1068,7 @@ impl ::protobuf::Message for ItemLogin {
         self.totp_uri.clear();
         self.passkeys.clear();
         self.item_username.clear();
+        self.autofill_urls.clear();
         self.special_fields.clear();
     }
 
@@ -832,6 +1080,7 @@ impl ::protobuf::Message for ItemLogin {
             totp_uri: ::std::string::String::new(),
             passkeys: ::std::vec::Vec::new(),
             item_username: ::std::string::String::new(),
+            autofill_urls: ::std::vec::Vec::new(),
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
@@ -3884,6 +4133,8 @@ pub struct Metadata {
     pub note: ::std::string::String,
     // @@protoc_insertion_point(field:proton_pass_item_v1.Metadata.item_uuid)
     pub item_uuid: ::std::string::String,
+    // @@protoc_insertion_point(field:proton_pass_item_v1.Metadata.custom_icon)
+    pub custom_icon: ::std::option::Option<::std::vec::Vec<u8>>,
     // special fields
     // @@protoc_insertion_point(special_field:proton_pass_item_v1.Metadata.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -3901,7 +4152,7 @@ impl Metadata {
     }
 
     fn generated_message_descriptor_data() -> ::protobuf::reflect::GeneratedMessageDescriptorData {
-        let mut fields = ::std::vec::Vec::with_capacity(3);
+        let mut fields = ::std::vec::Vec::with_capacity(4);
         let mut oneofs = ::std::vec::Vec::with_capacity(0);
         fields.push(::protobuf::reflect::rt::v2::make_simpler_field_accessor::<_, _>(
             "name",
@@ -3917,6 +4168,11 @@ impl Metadata {
             "item_uuid",
             |m: &Metadata| { &m.item_uuid },
             |m: &mut Metadata| { &mut m.item_uuid },
+        ));
+        fields.push(::protobuf::reflect::rt::v2::make_option_accessor::<_, _>(
+            "custom_icon",
+            |m: &Metadata| { &m.custom_icon },
+            |m: &mut Metadata| { &mut m.custom_icon },
         ));
         ::protobuf::reflect::GeneratedMessageDescriptorData::new_2::<Metadata>(
             "Metadata",
@@ -3945,6 +4201,9 @@ impl ::protobuf::Message for Metadata {
                 26 => {
                     self.item_uuid = is.read_string()?;
                 },
+                34 => {
+                    self.custom_icon = ::std::option::Option::Some(is.read_bytes()?);
+                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -3966,6 +4225,9 @@ impl ::protobuf::Message for Metadata {
         if !self.item_uuid.is_empty() {
             my_size += ::protobuf::rt::string_size(3, &self.item_uuid);
         }
+        if let Some(v) = self.custom_icon.as_ref() {
+            my_size += ::protobuf::rt::bytes_size(4, &v);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -3980,6 +4242,9 @@ impl ::protobuf::Message for Metadata {
         }
         if !self.item_uuid.is_empty() {
             os.write_string(3, &self.item_uuid)?;
+        }
+        if let Some(v) = self.custom_icon.as_ref() {
+            os.write_bytes(4, v)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -4001,6 +4266,7 @@ impl ::protobuf::Message for Metadata {
         self.name.clear();
         self.note.clear();
         self.item_uuid.clear();
+        self.custom_icon = ::std::option::Option::None;
         self.special_fields.clear();
     }
 
@@ -4009,6 +4275,7 @@ impl ::protobuf::Message for Metadata {
             name: ::std::string::String::new(),
             note: ::std::string::String::new(),
             item_uuid: ::std::string::String::new(),
+            custom_icon: ::std::option::Option::None,
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance
@@ -5075,103 +5342,111 @@ static file_descriptor_proto_data: &'static [u8] = b"\
     \x12\x12\n\x04note\x18\n\x20\x01(\tR\x04note\x12#\n\rcredential_id\x18\
     \x0b\x20\x01(\x0cR\x0ccredentialId\x12\x1f\n\x0buser_handle\x18\x0c\x20\
     \x01(\x0cR\nuserHandle\x12M\n\rcreation_data\x18\r\x20\x01(\x0b2(.proton\
-    _pass_item_v1.PasskeyCreationDataR\x0ccreationData\"\xd4\x01\n\tItemLogi\
-    n\x12\x1d\n\nitem_email\x18\x01\x20\x01(\tR\titemEmail\x12\x1a\n\x08pass\
-    word\x18\x02\x20\x01(\tR\x08password\x12\x12\n\x04urls\x18\x03\x20\x03(\
-    \tR\x04urls\x12\x19\n\x08totp_uri\x18\x04\x20\x01(\tR\x07totpUri\x128\n\
-    \x08passkeys\x18\x05\x20\x03(\x0b2\x1c.proton_pass_item_v1.PasskeyR\x08p\
-    asskeys\x12#\n\ritem_username\x18\x06\x20\x01(\tR\x0citemUsername\"\x0b\
-    \n\tItemAlias\"z\n\rCustomSection\x12!\n\x0csection_name\x18\x01\x20\x01\
-    (\tR\x0bsectionName\x12F\n\x0esection_fields\x18\x02\x20\x03(\x0b2\x1f.p\
-    roton_pass_item_v1.ExtraFieldR\rsectionFields\"L\n\nItemCustom\x12>\n\
-    \x08sections\x18\x01\x20\x03(\x0b2\".proton_pass_item_v1.CustomSectionR\
-    \x08sections\"\x8c\x01\n\nItemSSHKey\x12\x1f\n\x0bprivate_key\x18\x01\
-    \x20\x01(\tR\nprivateKey\x12\x1d\n\npublic_key\x18\x02\x20\x01(\tR\tpubl\
-    icKey\x12>\n\x08sections\x18\x03\x20\x03(\x0b2\".proton_pass_item_v1.Cus\
-    tomSectionR\x08sections\"\xb9\x01\n\x08ItemWifi\x12\x12\n\x04ssid\x18\
-    \x01\x20\x01(\tR\x04ssid\x12\x1a\n\x08password\x18\x02\x20\x01(\tR\x08pa\
-    ssword\x12=\n\x08security\x18\x03\x20\x01(\x0e2!.proton_pass_item_v1.Wif\
-    iSecurityR\x08security\x12>\n\x08sections\x18\x04\x20\x03(\x0b2\".proton\
-    _pass_item_v1.CustomSectionR\x08sections\"\xf9\x01\n\x0eItemCreditCard\
-    \x12'\n\x0fcardholder_name\x18\x01\x20\x01(\tR\x0ecardholderName\x12:\n\
-    \tcard_type\x18\x02\x20\x01(\x0e2\x1d.proton_pass_item_v1.CardTypeR\x08c\
-    ardType\x12\x16\n\x06number\x18\x03\x20\x01(\tR\x06number\x12/\n\x13veri\
-    fication_number\x18\x04\x20\x01(\tR\x12verificationNumber\x12'\n\x0fexpi\
-    ration_date\x18\x05\x20\x01(\tR\x0eexpirationDate\x12\x10\n\x03pin\x18\
-    \x06\x20\x01(\tR\x03pin\"\xc0\x0b\n\x0cItemIdentity\x12\x1b\n\tfull_name\
-    \x18\x01\x20\x01(\tR\x08fullName\x12\x14\n\x05email\x18\x02\x20\x01(\tR\
-    \x05email\x12!\n\x0cphone_number\x18\x03\x20\x01(\tR\x0bphoneNumber\x12\
-    \x1d\n\nfirst_name\x18\x04\x20\x01(\tR\tfirstName\x12\x1f\n\x0bmiddle_na\
-    me\x18\x05\x20\x01(\tR\nmiddleName\x12\x1b\n\tlast_name\x18\x06\x20\x01(\
-    \tR\x08lastName\x12\x1c\n\tbirthdate\x18\x07\x20\x01(\tR\tbirthdate\x12\
-    \x16\n\x06gender\x18\x08\x20\x01(\tR\x06gender\x12U\n\x16extra_personal_\
-    details\x18\t\x20\x03(\x0b2\x1f.proton_pass_item_v1.ExtraFieldR\x14extra\
-    PersonalDetails\x12\"\n\x0corganization\x18\n\x20\x01(\tR\x0corganizatio\
-    n\x12%\n\x0estreet_address\x18\x0b\x20\x01(\tR\rstreetAddress\x12+\n\x12\
-    zip_or_postal_code\x18\x0c\x20\x01(\tR\x0fzipOrPostalCode\x12\x12\n\x04c\
-    ity\x18\r\x20\x01(\tR\x04city\x12*\n\x11state_or_province\x18\x0e\x20\
-    \x01(\tR\x0fstateOrProvince\x12*\n\x11country_or_region\x18\x0f\x20\x01(\
-    \tR\x0fcountryOrRegion\x12\x14\n\x05floor\x18\x10\x20\x01(\tR\x05floor\
-    \x12\x16\n\x06county\x18\x11\x20\x01(\tR\x06county\x12S\n\x15extra_addre\
-    ss_details\x18\x12\x20\x03(\x0b2\x1f.proton_pass_item_v1.ExtraFieldR\x13\
-    extraAddressDetails\x124\n\x16social_security_number\x18\x13\x20\x01(\tR\
-    \x14socialSecurityNumber\x12'\n\x0fpassport_number\x18\x14\x20\x01(\tR\
-    \x0epassportNumber\x12%\n\x0elicense_number\x18\x15\x20\x01(\tR\rlicense\
-    Number\x12\x18\n\x07website\x18\x16\x20\x01(\tR\x07website\x12\x19\n\x08\
-    x_handle\x18\x17\x20\x01(\tR\x07xHandle\x12.\n\x13second_phone_number\
-    \x18\x18\x20\x01(\tR\x11secondPhoneNumber\x12\x1a\n\x08linkedin\x18\x19\
-    \x20\x01(\tR\x08linkedin\x12\x16\n\x06reddit\x18\x1a\x20\x01(\tR\x06redd\
-    it\x12\x1a\n\x08facebook\x18\x1b\x20\x01(\tR\x08facebook\x12\x14\n\x05ya\
-    hoo\x18\x1c\x20\x01(\tR\x05yahoo\x12\x1c\n\tinstagram\x18\x1d\x20\x01(\t\
-    R\tinstagram\x12S\n\x15extra_contact_details\x18\x1e\x20\x03(\x0b2\x1f.p\
-    roton_pass_item_v1.ExtraFieldR\x13extraContactDetails\x12\x18\n\x07compa\
-    ny\x18\x1f\x20\x01(\tR\x07company\x12\x1b\n\tjob_title\x18\x20\x20\x01(\
-    \tR\x08jobTitle\x12)\n\x10personal_website\x18!\x20\x01(\tR\x0fpersonalW\
-    ebsite\x12*\n\x11work_phone_number\x18\"\x20\x01(\tR\x0fworkPhoneNumber\
-    \x12\x1d\n\nwork_email\x18#\x20\x01(\tR\tworkEmail\x12M\n\x12extra_work_\
-    details\x18$\x20\x03(\x0b2\x1f.proton_pass_item_v1.ExtraFieldR\x10extraW\
-    orkDetails\x12I\n\x0eextra_sections\x18%\x20\x03(\x0b2\".proton_pass_ite\
-    m_v1.CustomSectionR\rextraSections\"i\n\x11AllowedAndroidApp\x12!\n\x0cp\
-    ackage_name\x18\x01\x20\x01(\tR\x0bpackageName\x12\x16\n\x06hashes\x18\
-    \x02\x20\x03(\tR\x06hashes\x12\x19\n\x08app_name\x18\x03\x20\x01(\tR\x07\
-    appName\"\\\n\x0fAndroidSpecific\x12I\n\x0callowed_apps\x18\x01\x20\x03(\
-    \x0b2&.proton_pass_item_v1.AllowedAndroidAppR\x0ballowedApps\"R\n\x10Pla\
-    tformSpecific\x12>\n\x07android\x18\x01\x20\x01(\x0b2$.proton_pass_item_\
-    v1.AndroidSpecificR\x07android\"&\n\tExtraTotp\x12\x19\n\x08totp_uri\x18\
-    \x01\x20\x01(\tR\x07totpUri\"*\n\x0eExtraTextField\x12\x18\n\x07content\
-    \x18\x01\x20\x01(\tR\x07content\",\n\x10ExtraHiddenField\x12\x18\n\x07co\
-    ntent\x18\x01\x20\x01(\tR\x07content\"O\n\x13ExtraTimestampField\x128\n\
-    \ttimestamp\x18\x01\x20\x01(\x0b2\x1a.google.protobuf.TimestampR\ttimest\
-    amp\"\xb2\x02\n\nExtraField\x12\x1d\n\nfield_name\x18\x01\x20\x01(\tR\tf\
-    ieldName\x124\n\x04totp\x18\x02\x20\x01(\x0b2\x1e.proton_pass_item_v1.Ex\
-    traTotpH\0R\x04totp\x129\n\x04text\x18\x03\x20\x01(\x0b2#.proton_pass_it\
-    em_v1.ExtraTextFieldH\0R\x04text\x12?\n\x06hidden\x18\x04\x20\x01(\x0b2%\
-    .proton_pass_item_v1.ExtraHiddenFieldH\0R\x06hidden\x12H\n\ttimestamp\
-    \x18\x05\x20\x01(\x0b2(.proton_pass_item_v1.ExtraTimestampFieldH\0R\ttim\
-    estampB\t\n\x07content\"O\n\x08Metadata\x12\x12\n\x04name\x18\x01\x20\
-    \x01(\tR\x04name\x12\x12\n\x04note\x18\x02\x20\x01(\tR\x04note\x12\x1b\n\
-    \titem_uuid\x18\x03\x20\x01(\tR\x08itemUuid\"\xee\x03\n\x07Content\x123\
-    \n\x04note\x18\x02\x20\x01(\x0b2\x1d.proton_pass_item_v1.ItemNoteH\0R\
-    \x04note\x126\n\x05login\x18\x03\x20\x01(\x0b2\x1e.proton_pass_item_v1.I\
-    temLoginH\0R\x05login\x126\n\x05alias\x18\x04\x20\x01(\x0b2\x1e.proton_p\
-    ass_item_v1.ItemAliasH\0R\x05alias\x12F\n\x0bcredit_card\x18\x05\x20\x01\
-    (\x0b2#.proton_pass_item_v1.ItemCreditCardH\0R\ncreditCard\x12?\n\x08ide\
-    ntity\x18\x06\x20\x01(\x0b2!.proton_pass_item_v1.ItemIdentityH\0R\x08ide\
-    ntity\x12:\n\x07ssh_key\x18\x07\x20\x01(\x0b2\x1f.proton_pass_item_v1.It\
-    emSSHKeyH\0R\x06sshKey\x123\n\x04wifi\x18\x08\x20\x01(\x0b2\x1d.proton_p\
-    ass_item_v1.ItemWifiH\0R\x04wifi\x129\n\x06custom\x18\t\x20\x01(\x0b2\
-    \x1f.proton_pass_item_v1.ItemCustomH\0R\x06customB\t\n\x07content\"\x91\
-    \x02\n\x04Item\x129\n\x08metadata\x18\x01\x20\x01(\x0b2\x1d.proton_pass_\
-    item_v1.MetadataR\x08metadata\x126\n\x07content\x18\x02\x20\x01(\x0b2\
-    \x1c.proton_pass_item_v1.ContentR\x07content\x12R\n\x11platform_specific\
-    \x18\x03\x20\x01(\x0b2%.proton_pass_item_v1.PlatformSpecificR\x10platfor\
-    mSpecific\x12B\n\x0cextra_fields\x18\x04\x20\x03(\x0b2\x1f.proton_pass_i\
-    tem_v1.ExtraFieldR\x0bextraFields*Q\n\x0cWifiSecurity\x12\x1b\n\x17Unspe\
-    cifiedWifiSecurity\x10\0\x12\x07\n\x03WPA\x10\x01\x12\x08\n\x04WPA2\x10\
-    \x02\x12\x08\n\x04WPA3\x10\x03\x12\x07\n\x03WEP\x10\x04*U\n\x08CardType\
-    \x12\x0f\n\x0bUnspecified\x10\0\x12\t\n\x05Other\x10\x01\x12\x08\n\x04Vi\
-    sa\x10\x02\x12\x0e\n\nMastercard\x10\x03\x12\x13\n\x0fAmericanExpress\
-    \x10\x04b\x06proto3\
+    _pass_item_v1.PasskeyCreationDataR\x0ccreationData\"\xc7\x01\n\x0bAutofi\
+    llUrl\x12\x10\n\x03url\x18\x01\x20\x01(\tR\x03url\x129\n\x04mode\x18\x02\
+    \x20\x01(\x0e2%.proton_pass_item_v1.AutofillUrl.ModeR\x04mode\"k\n\x04Mo\
+    de\x12\x0b\n\x07Default\x10\0\x12\t\n\x05Exact\x10\x01\x12\t\n\x05Never\
+    \x10\x02\x12\r\n\tStartWith\x10\x03\x12\x0b\n\x07Pattern\x10\x04\x12\x15\
+    \n\x11RegularExpression\x10\x05\x12\r\n\tExactPath\x10\x06\"\x9b\x02\n\t\
+    ItemLogin\x12\x1d\n\nitem_email\x18\x01\x20\x01(\tR\titemEmail\x12\x1a\n\
+    \x08password\x18\x02\x20\x01(\tR\x08password\x12\x12\n\x04urls\x18\x03\
+    \x20\x03(\tR\x04urls\x12\x19\n\x08totp_uri\x18\x04\x20\x01(\tR\x07totpUr\
+    i\x128\n\x08passkeys\x18\x05\x20\x03(\x0b2\x1c.proton_pass_item_v1.Passk\
+    eyR\x08passkeys\x12#\n\ritem_username\x18\x06\x20\x01(\tR\x0citemUsernam\
+    e\x12E\n\rautofill_urls\x18\x07\x20\x03(\x0b2\x20.proton_pass_item_v1.Au\
+    tofillUrlR\x0cautofillUrls\"\x0b\n\tItemAlias\"z\n\rCustomSection\x12!\n\
+    \x0csection_name\x18\x01\x20\x01(\tR\x0bsectionName\x12F\n\x0esection_fi\
+    elds\x18\x02\x20\x03(\x0b2\x1f.proton_pass_item_v1.ExtraFieldR\rsectionF\
+    ields\"L\n\nItemCustom\x12>\n\x08sections\x18\x01\x20\x03(\x0b2\".proton\
+    _pass_item_v1.CustomSectionR\x08sections\"\x8c\x01\n\nItemSSHKey\x12\x1f\
+    \n\x0bprivate_key\x18\x01\x20\x01(\tR\nprivateKey\x12\x1d\n\npublic_key\
+    \x18\x02\x20\x01(\tR\tpublicKey\x12>\n\x08sections\x18\x03\x20\x03(\x0b2\
+    \".proton_pass_item_v1.CustomSectionR\x08sections\"\xb9\x01\n\x08ItemWif\
+    i\x12\x12\n\x04ssid\x18\x01\x20\x01(\tR\x04ssid\x12\x1a\n\x08password\
+    \x18\x02\x20\x01(\tR\x08password\x12=\n\x08security\x18\x03\x20\x01(\x0e\
+    2!.proton_pass_item_v1.WifiSecurityR\x08security\x12>\n\x08sections\x18\
+    \x04\x20\x03(\x0b2\".proton_pass_item_v1.CustomSectionR\x08sections\"\
+    \xf9\x01\n\x0eItemCreditCard\x12'\n\x0fcardholder_name\x18\x01\x20\x01(\
+    \tR\x0ecardholderName\x12:\n\tcard_type\x18\x02\x20\x01(\x0e2\x1d.proton\
+    _pass_item_v1.CardTypeR\x08cardType\x12\x16\n\x06number\x18\x03\x20\x01(\
+    \tR\x06number\x12/\n\x13verification_number\x18\x04\x20\x01(\tR\x12verif\
+    icationNumber\x12'\n\x0fexpiration_date\x18\x05\x20\x01(\tR\x0eexpiratio\
+    nDate\x12\x10\n\x03pin\x18\x06\x20\x01(\tR\x03pin\"\xc0\x0b\n\x0cItemIde\
+    ntity\x12\x1b\n\tfull_name\x18\x01\x20\x01(\tR\x08fullName\x12\x14\n\x05\
+    email\x18\x02\x20\x01(\tR\x05email\x12!\n\x0cphone_number\x18\x03\x20\
+    \x01(\tR\x0bphoneNumber\x12\x1d\n\nfirst_name\x18\x04\x20\x01(\tR\tfirst\
+    Name\x12\x1f\n\x0bmiddle_name\x18\x05\x20\x01(\tR\nmiddleName\x12\x1b\n\
+    \tlast_name\x18\x06\x20\x01(\tR\x08lastName\x12\x1c\n\tbirthdate\x18\x07\
+    \x20\x01(\tR\tbirthdate\x12\x16\n\x06gender\x18\x08\x20\x01(\tR\x06gende\
+    r\x12U\n\x16extra_personal_details\x18\t\x20\x03(\x0b2\x1f.proton_pass_i\
+    tem_v1.ExtraFieldR\x14extraPersonalDetails\x12\"\n\x0corganization\x18\n\
+    \x20\x01(\tR\x0corganization\x12%\n\x0estreet_address\x18\x0b\x20\x01(\t\
+    R\rstreetAddress\x12+\n\x12zip_or_postal_code\x18\x0c\x20\x01(\tR\x0fzip\
+    OrPostalCode\x12\x12\n\x04city\x18\r\x20\x01(\tR\x04city\x12*\n\x11state\
+    _or_province\x18\x0e\x20\x01(\tR\x0fstateOrProvince\x12*\n\x11country_or\
+    _region\x18\x0f\x20\x01(\tR\x0fcountryOrRegion\x12\x14\n\x05floor\x18\
+    \x10\x20\x01(\tR\x05floor\x12\x16\n\x06county\x18\x11\x20\x01(\tR\x06cou\
+    nty\x12S\n\x15extra_address_details\x18\x12\x20\x03(\x0b2\x1f.proton_pas\
+    s_item_v1.ExtraFieldR\x13extraAddressDetails\x124\n\x16social_security_n\
+    umber\x18\x13\x20\x01(\tR\x14socialSecurityNumber\x12'\n\x0fpassport_num\
+    ber\x18\x14\x20\x01(\tR\x0epassportNumber\x12%\n\x0elicense_number\x18\
+    \x15\x20\x01(\tR\rlicenseNumber\x12\x18\n\x07website\x18\x16\x20\x01(\tR\
+    \x07website\x12\x19\n\x08x_handle\x18\x17\x20\x01(\tR\x07xHandle\x12.\n\
+    \x13second_phone_number\x18\x18\x20\x01(\tR\x11secondPhoneNumber\x12\x1a\
+    \n\x08linkedin\x18\x19\x20\x01(\tR\x08linkedin\x12\x16\n\x06reddit\x18\
+    \x1a\x20\x01(\tR\x06reddit\x12\x1a\n\x08facebook\x18\x1b\x20\x01(\tR\x08\
+    facebook\x12\x14\n\x05yahoo\x18\x1c\x20\x01(\tR\x05yahoo\x12\x1c\n\tinst\
+    agram\x18\x1d\x20\x01(\tR\tinstagram\x12S\n\x15extra_contact_details\x18\
+    \x1e\x20\x03(\x0b2\x1f.proton_pass_item_v1.ExtraFieldR\x13extraContactDe\
+    tails\x12\x18\n\x07company\x18\x1f\x20\x01(\tR\x07company\x12\x1b\n\tjob\
+    _title\x18\x20\x20\x01(\tR\x08jobTitle\x12)\n\x10personal_website\x18!\
+    \x20\x01(\tR\x0fpersonalWebsite\x12*\n\x11work_phone_number\x18\"\x20\
+    \x01(\tR\x0fworkPhoneNumber\x12\x1d\n\nwork_email\x18#\x20\x01(\tR\twork\
+    Email\x12M\n\x12extra_work_details\x18$\x20\x03(\x0b2\x1f.proton_pass_it\
+    em_v1.ExtraFieldR\x10extraWorkDetails\x12I\n\x0eextra_sections\x18%\x20\
+    \x03(\x0b2\".proton_pass_item_v1.CustomSectionR\rextraSections\"i\n\x11A\
+    llowedAndroidApp\x12!\n\x0cpackage_name\x18\x01\x20\x01(\tR\x0bpackageNa\
+    me\x12\x16\n\x06hashes\x18\x02\x20\x03(\tR\x06hashes\x12\x19\n\x08app_na\
+    me\x18\x03\x20\x01(\tR\x07appName\"\\\n\x0fAndroidSpecific\x12I\n\x0call\
+    owed_apps\x18\x01\x20\x03(\x0b2&.proton_pass_item_v1.AllowedAndroidAppR\
+    \x0ballowedApps\"R\n\x10PlatformSpecific\x12>\n\x07android\x18\x01\x20\
+    \x01(\x0b2$.proton_pass_item_v1.AndroidSpecificR\x07android\"&\n\tExtraT\
+    otp\x12\x19\n\x08totp_uri\x18\x01\x20\x01(\tR\x07totpUri\"*\n\x0eExtraTe\
+    xtField\x12\x18\n\x07content\x18\x01\x20\x01(\tR\x07content\",\n\x10Extr\
+    aHiddenField\x12\x18\n\x07content\x18\x01\x20\x01(\tR\x07content\"O\n\
+    \x13ExtraTimestampField\x128\n\ttimestamp\x18\x01\x20\x01(\x0b2\x1a.goog\
+    le.protobuf.TimestampR\ttimestamp\"\xb2\x02\n\nExtraField\x12\x1d\n\nfie\
+    ld_name\x18\x01\x20\x01(\tR\tfieldName\x124\n\x04totp\x18\x02\x20\x01(\
+    \x0b2\x1e.proton_pass_item_v1.ExtraTotpH\0R\x04totp\x129\n\x04text\x18\
+    \x03\x20\x01(\x0b2#.proton_pass_item_v1.ExtraTextFieldH\0R\x04text\x12?\
+    \n\x06hidden\x18\x04\x20\x01(\x0b2%.proton_pass_item_v1.ExtraHiddenField\
+    H\0R\x06hidden\x12H\n\ttimestamp\x18\x05\x20\x01(\x0b2(.proton_pass_item\
+    _v1.ExtraTimestampFieldH\0R\ttimestampB\t\n\x07content\"\x85\x01\n\x08Me\
+    tadata\x12\x12\n\x04name\x18\x01\x20\x01(\tR\x04name\x12\x12\n\x04note\
+    \x18\x02\x20\x01(\tR\x04note\x12\x1b\n\titem_uuid\x18\x03\x20\x01(\tR\
+    \x08itemUuid\x12$\n\x0bcustom_icon\x18\x04\x20\x01(\x0cH\0R\ncustomIcon\
+    \x88\x01\x01B\x0e\n\x0c_custom_icon\"\xee\x03\n\x07Content\x123\n\x04not\
+    e\x18\x02\x20\x01(\x0b2\x1d.proton_pass_item_v1.ItemNoteH\0R\x04note\x12\
+    6\n\x05login\x18\x03\x20\x01(\x0b2\x1e.proton_pass_item_v1.ItemLoginH\0R\
+    \x05login\x126\n\x05alias\x18\x04\x20\x01(\x0b2\x1e.proton_pass_item_v1.\
+    ItemAliasH\0R\x05alias\x12F\n\x0bcredit_card\x18\x05\x20\x01(\x0b2#.prot\
+    on_pass_item_v1.ItemCreditCardH\0R\ncreditCard\x12?\n\x08identity\x18\
+    \x06\x20\x01(\x0b2!.proton_pass_item_v1.ItemIdentityH\0R\x08identity\x12\
+    :\n\x07ssh_key\x18\x07\x20\x01(\x0b2\x1f.proton_pass_item_v1.ItemSSHKeyH\
+    \0R\x06sshKey\x123\n\x04wifi\x18\x08\x20\x01(\x0b2\x1d.proton_pass_item_\
+    v1.ItemWifiH\0R\x04wifi\x129\n\x06custom\x18\t\x20\x01(\x0b2\x1f.proton_\
+    pass_item_v1.ItemCustomH\0R\x06customB\t\n\x07content\"\x91\x02\n\x04Ite\
+    m\x129\n\x08metadata\x18\x01\x20\x01(\x0b2\x1d.proton_pass_item_v1.Metad\
+    ataR\x08metadata\x126\n\x07content\x18\x02\x20\x01(\x0b2\x1c.proton_pass\
+    _item_v1.ContentR\x07content\x12R\n\x11platform_specific\x18\x03\x20\x01\
+    (\x0b2%.proton_pass_item_v1.PlatformSpecificR\x10platformSpecific\x12B\n\
+    \x0cextra_fields\x18\x04\x20\x03(\x0b2\x1f.proton_pass_item_v1.ExtraFiel\
+    dR\x0bextraFields*Q\n\x0cWifiSecurity\x12\x1b\n\x17UnspecifiedWifiSecuri\
+    ty\x10\0\x12\x07\n\x03WPA\x10\x01\x12\x08\n\x04WPA2\x10\x02\x12\x08\n\
+    \x04WPA3\x10\x03\x12\x07\n\x03WEP\x10\x04*U\n\x08CardType\x12\x0f\n\x0bU\
+    nspecified\x10\0\x12\t\n\x05Other\x10\x01\x12\x08\n\x04Visa\x10\x02\x12\
+    \x0e\n\nMastercard\x10\x03\x12\x13\n\x0fAmericanExpress\x10\x04b\x06prot\
+    o3\
 ";
 
 /// `FileDescriptorProto` object which was a source for this generated file
@@ -5190,10 +5465,11 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
         let generated_file_descriptor = generated_file_descriptor_lazy.get(|| {
             let mut deps = ::std::vec::Vec::with_capacity(1);
             deps.push(::protobuf::well_known_types::timestamp::file_descriptor().clone());
-            let mut messages = ::std::vec::Vec::with_capacity(22);
+            let mut messages = ::std::vec::Vec::with_capacity(23);
             messages.push(ItemNote::generated_message_descriptor_data());
             messages.push(PasskeyCreationData::generated_message_descriptor_data());
             messages.push(Passkey::generated_message_descriptor_data());
+            messages.push(AutofillUrl::generated_message_descriptor_data());
             messages.push(ItemLogin::generated_message_descriptor_data());
             messages.push(ItemAlias::generated_message_descriptor_data());
             messages.push(CustomSection::generated_message_descriptor_data());
@@ -5213,9 +5489,10 @@ pub fn file_descriptor() -> &'static ::protobuf::reflect::FileDescriptor {
             messages.push(Metadata::generated_message_descriptor_data());
             messages.push(Content::generated_message_descriptor_data());
             messages.push(Item::generated_message_descriptor_data());
-            let mut enums = ::std::vec::Vec::with_capacity(2);
+            let mut enums = ::std::vec::Vec::with_capacity(3);
             enums.push(WifiSecurity::generated_enum_descriptor_data());
             enums.push(CardType::generated_enum_descriptor_data());
+            enums.push(autofill_url::Mode::generated_enum_descriptor_data());
             ::protobuf::reflect::GeneratedFileDescriptor::new_generated(
                 file_descriptor_proto(),
                 deps,

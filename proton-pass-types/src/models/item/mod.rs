@@ -28,21 +28,8 @@ pub use field::Field;
 pub use flags::*;
 use protobuf::Message;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, serde::Deserialize, serde::Serialize)]
-pub struct ItemId(pub(crate) String);
-display_for_basic!(ItemId);
-
-impl ItemId {
-    pub fn new(id: String) -> Self {
-        Self(id)
-    }
-
-    pub fn value(&self) -> &str {
-        &self.0
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, serde::Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub enum ItemState {
     Active = 1,
     Trashed = 2,
@@ -65,32 +52,36 @@ pub enum UpdateFieldResult {
     CustomFieldCreated,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[proton_pass_derive::ffi_type]
 pub struct AllowedAndroidApp {
     pub package_name: String,
     pub hashes: Vec<String>,
     pub app_name: String,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[proton_pass_derive::ffi_type]
 pub struct AndroidSpecific {
     pub allowed_apps: Vec<AllowedAndroidApp>,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[proton_pass_derive::ffi_type]
 pub struct PlatformSpecific {
     pub android: Option<AndroidSpecific>,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct ItemData {
     pub title: String,
     pub note: String,
     pub item_uuid: String,
     pub content: ItemContent,
     pub extra_fields: Vec<ItemExtraField>,
-    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub platform_specific: Option<PlatformSpecific>,
+    pub custom_icon: Option<Vec<u8>>,
 }
 
 impl ItemData {
@@ -112,6 +103,7 @@ impl ItemData {
             content,
             extra_fields,
             platform_specific: None,
+            custom_icon: None,
         })
     }
 
@@ -158,6 +150,7 @@ impl ItemData {
                 item_v1::content::Content::Login(login_mut) => {
                     login_mut.urls.clear();
                     login_mut.passkeys.clear();
+                    login_mut.autofill_urls.clear();
                 }
                 item_v1::content::Content::Custom(custom_mut) => {
                     custom_mut.sections.clear();
@@ -554,6 +547,7 @@ impl From<ItemData> for item_v1::Item {
             name: value.title,
             note: value.note,
             item_uuid: value.item_uuid,
+            custom_icon: value.custom_icon,
             ..Default::default()
         };
 
@@ -587,11 +581,13 @@ impl From<item_v1::Item> for ItemData {
             content: ItemContent::from(content),
             extra_fields: value.extra_fields.into_iter().map(ItemExtraField::from).collect(),
             platform_specific: value.platform_specific.into_option().map(PlatformSpecific::from),
+            custom_icon: metadata.custom_icon,
         }
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct ItemExtraField {
     pub name: String,
     pub content: ItemExtraFieldContent,
@@ -619,7 +615,8 @@ impl From<item_v1::ExtraField> for ItemExtraField {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub enum ItemExtraFieldContent {
     Text(String),
     Totp(String),
@@ -673,7 +670,8 @@ impl From<item_v1::extra_field::Content> for ItemExtraFieldContent {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub enum ItemContent {
     Note(NoteItem),
     Login(LoginItem),
@@ -739,7 +737,8 @@ impl From<item_v1::Content> for ItemContent {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct NoteItem;
 
 impl NoteItem {
@@ -760,7 +759,8 @@ impl From<item_v1::ItemNote> for NoteItem {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct PasskeyCreationData {
     pub os_name: String,
     pub os_version: String,
@@ -768,7 +768,8 @@ pub struct PasskeyCreationData {
     pub app_version: String,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct Passkey {
     pub key_id: String,
     pub content: Vec<u8>,
@@ -785,7 +786,75 @@ pub struct Passkey {
     pub creation_data: Option<PasskeyCreationData>,
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
+pub enum AutofillUrlMode {
+    #[default]
+    Default,
+    Exact,
+    Never,
+    StartWith,
+    Pattern,
+    RegularExpression,
+    ExactPath,
+}
+
+impl From<AutofillUrlMode> for item_v1::autofill_url::Mode {
+    fn from(value: AutofillUrlMode) -> Self {
+        match value {
+            AutofillUrlMode::Default => item_v1::autofill_url::Mode::Default,
+            AutofillUrlMode::Exact => item_v1::autofill_url::Mode::Exact,
+            AutofillUrlMode::Never => item_v1::autofill_url::Mode::Never,
+            AutofillUrlMode::StartWith => item_v1::autofill_url::Mode::StartWith,
+            AutofillUrlMode::Pattern => item_v1::autofill_url::Mode::Pattern,
+            AutofillUrlMode::RegularExpression => item_v1::autofill_url::Mode::RegularExpression,
+            AutofillUrlMode::ExactPath => item_v1::autofill_url::Mode::ExactPath,
+        }
+    }
+}
+
+impl From<item_v1::autofill_url::Mode> for AutofillUrlMode {
+    fn from(value: item_v1::autofill_url::Mode) -> Self {
+        match value {
+            item_v1::autofill_url::Mode::Default => AutofillUrlMode::Default,
+            item_v1::autofill_url::Mode::Exact => AutofillUrlMode::Exact,
+            item_v1::autofill_url::Mode::Never => AutofillUrlMode::Never,
+            item_v1::autofill_url::Mode::StartWith => AutofillUrlMode::StartWith,
+            item_v1::autofill_url::Mode::Pattern => AutofillUrlMode::Pattern,
+            item_v1::autofill_url::Mode::RegularExpression => AutofillUrlMode::RegularExpression,
+            item_v1::autofill_url::Mode::ExactPath => AutofillUrlMode::ExactPath,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
+pub struct AutofillUrl {
+    pub url: String,
+    pub mode: AutofillUrlMode,
+}
+
+impl From<AutofillUrl> for item_v1::AutofillUrl {
+    fn from(value: AutofillUrl) -> Self {
+        item_v1::AutofillUrl {
+            url: value.url,
+            mode: item_v1::autofill_url::Mode::from(value.mode).into(),
+            ..Default::default()
+        }
+    }
+}
+
+impl From<item_v1::AutofillUrl> for AutofillUrl {
+    fn from(value: item_v1::AutofillUrl) -> Self {
+        Self {
+            url: value.url,
+            mode: AutofillUrlMode::from(value.mode.enum_value_or_default()),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct LoginItem {
     pub email: String,
     pub username: String,
@@ -793,6 +862,7 @@ pub struct LoginItem {
     pub urls: Vec<String>,
     pub totp_uri: String,
     pub passkeys: Vec<Passkey>,
+    pub autofill_urls: Vec<AutofillUrl>,
 }
 
 impl LoginItem {
@@ -815,6 +885,12 @@ impl LoginItem {
             out.push_str("\n - URLS");
             for url in &self.urls {
                 out.push_str(format!("\n   - {}", url).as_str());
+            }
+        }
+        if !self.autofill_urls.is_empty() {
+            out.push_str("\n - Autofill URLS");
+            for autofill_url in &self.autofill_urls {
+                out.push_str(format!("\n   - {}", autofill_url.url).as_str());
             }
         }
 
@@ -891,6 +967,28 @@ impl From<item_v1::Passkey> for Passkey {
 
 impl From<LoginItem> for item_v1::ItemLogin {
     fn from(value: LoginItem) -> Self {
+        // `autofill_urls` is the field clients should use going forward. Migrate the legacy
+        // `urls` into it here, on both create (serialize) and update (perform_update), since
+        // both route a `LoginItem` through this conversion. Only migrate when the caller hasn't
+        // already provided autofill_urls, so an explicit (possibly empty) value is respected.
+        let autofill_urls = if value.autofill_urls.is_empty() {
+            value
+                .urls
+                .iter()
+                .map(|url| item_v1::AutofillUrl {
+                    url: url.clone(),
+                    mode: item_v1::autofill_url::Mode::Default.into(),
+                    ..Default::default()
+                })
+                .collect()
+        } else {
+            value
+                .autofill_urls
+                .into_iter()
+                .map(item_v1::AutofillUrl::from)
+                .collect()
+        };
+
         item_v1::ItemLogin {
             item_email: value.email,
             item_username: value.username,
@@ -898,6 +996,7 @@ impl From<LoginItem> for item_v1::ItemLogin {
             urls: value.urls,
             totp_uri: value.totp_uri,
             passkeys: value.passkeys.into_iter().map(item_v1::Passkey::from).collect(),
+            autofill_urls,
             ..Default::default()
         }
     }
@@ -912,11 +1011,13 @@ impl From<item_v1::ItemLogin> for LoginItem {
             urls: value.urls,
             totp_uri: value.totp_uri,
             passkeys: value.passkeys.into_iter().map(Passkey::from).collect(),
+            autofill_urls: value.autofill_urls.into_iter().map(AutofillUrl::from).collect(),
         }
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct AliasItem;
 
 impl AliasItem {
@@ -937,7 +1038,8 @@ impl From<item_v1::ItemAlias> for AliasItem {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct CreditCardItem {
     pub cardholder_name: String,
     pub card_type: CardType,
@@ -996,7 +1098,8 @@ impl From<item_v1::ItemCreditCard> for CreditCardItem {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct IdentityItem {
     pub full_name: String,
     pub email: String,
@@ -1318,7 +1421,8 @@ impl From<item_v1::ItemIdentity> for IdentityItem {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct SshKeyItem {
     pub private_key: String,
     pub public_key: String,
@@ -1359,7 +1463,8 @@ impl From<item_v1::ItemSSHKey> for SshKeyItem {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct WifiItem {
     pub ssid: String,
     pub password: String,
@@ -1406,7 +1511,8 @@ impl From<item_v1::ItemWifi> for WifiItem {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct CustomItem {
     pub sections: Vec<CustomSection>,
 }
@@ -1445,7 +1551,8 @@ impl From<item_v1::ItemCustom> for CustomItem {
     }
 }
 
-#[derive(Clone, Debug, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub struct CustomSection {
     pub section_name: String,
     pub section_fields: Vec<ItemExtraField>,
@@ -1474,7 +1581,8 @@ impl From<item_v1::CustomSection> for CustomSection {
     }
 }
 
-#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub enum CardType {
     #[default]
     Unspecified,
@@ -1508,8 +1616,8 @@ impl From<item_v1::CardType> for CardType {
     }
 }
 
-#[derive(Clone, Debug, Default, serde::Deserialize, serde::Serialize, PartialEq, Eq)]
-#[proton_pass_derive::ffi_type(skip_serde_derive)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[proton_pass_derive::ffi_type]
 pub enum WifiSecurity {
     #[default]
     UnspecifiedWifiSecurity,
@@ -1555,6 +1663,7 @@ mod tests {
             content,
             extra_fields: vec![],
             platform_specific: None,
+            custom_icon: None,
         }
     }
 
@@ -1582,6 +1691,7 @@ mod tests {
             urls: vec!["https://old.com".to_string()],
             totp_uri: "".to_string(),
             passkeys: vec![],
+            autofill_urls: vec![],
         }));
 
         // Update email
@@ -2004,6 +2114,7 @@ mod tests {
             urls: vec![],
             totp_uri: "otpauth://totp/test".to_string(),
             passkeys: vec![],
+            autofill_urls: vec![],
         }));
 
         // Attempting to update totp_uri should create a custom field instead (returns CustomFieldCreated)
@@ -2081,6 +2192,7 @@ mod tests {
             urls: vec![],
             totp_uri: "".to_string(),
             passkeys: vec![],
+            autofill_urls: vec![],
         }));
 
         // Test case insensitive matching
@@ -2196,6 +2308,7 @@ mod tests {
             urls: vec!["https://old.com".to_string()],
             totp_uri: "".to_string(),
             passkeys: vec![],
+            autofill_urls: vec![],
         }));
 
         // Empty string should result in empty urls vector
@@ -2335,6 +2448,7 @@ mod tests {
             urls: vec!["https://example.com".to_string(), "https://app.example.com".to_string()],
             totp_uri: "".to_string(),
             passkeys: vec![],
+            autofill_urls: vec![],
         }));
 
         // Serialize the original
@@ -2361,5 +2475,251 @@ mod tests {
         } else {
             panic!("Expected Login content");
         }
+    }
+
+    #[test]
+    fn test_login_urls_migrate_to_autofill_urls_on_serialize() {
+        let item = create_test_item_data(ItemContent::Login(LoginItem {
+            email: "test@example.com".to_string(),
+            username: "testuser".to_string(),
+            password: "password123".to_string(),
+            urls: vec!["https://example.com".to_string(), "https://app.example.com".to_string()],
+            totp_uri: "".to_string(),
+            passkeys: vec![],
+            autofill_urls: vec![],
+        }));
+
+        let bytes = item.serialize().unwrap();
+        let result = ItemData::deserialize(&bytes).unwrap();
+
+        if let ItemContent::Login(login) = result.content {
+            assert_eq!(login.autofill_urls.len(), 2);
+            assert_eq!(login.autofill_urls[0].url, "https://example.com");
+            assert_eq!(login.autofill_urls[0].mode, AutofillUrlMode::Default);
+            assert_eq!(login.autofill_urls[1].url, "https://app.example.com");
+            assert_eq!(login.autofill_urls[1].mode, AutofillUrlMode::Default);
+        } else {
+            panic!("Expected Login content");
+        }
+    }
+
+    #[test]
+    fn test_login_autofill_urls_are_not_overridden_when_explicitly_provided() {
+        let item = create_test_item_data(ItemContent::Login(LoginItem {
+            email: "test@example.com".to_string(),
+            username: "testuser".to_string(),
+            password: "password123".to_string(),
+            urls: vec!["https://example.com".to_string()],
+            totp_uri: "".to_string(),
+            passkeys: vec![],
+            autofill_urls: vec![AutofillUrl {
+                url: "https://explicit.example.com".to_string(),
+                mode: AutofillUrlMode::Exact,
+            }],
+        }));
+
+        let bytes = item.serialize().unwrap();
+        let result = ItemData::deserialize(&bytes).unwrap();
+
+        if let ItemContent::Login(login) = result.content {
+            assert_eq!(login.autofill_urls.len(), 1);
+            assert_eq!(login.autofill_urls[0].url, "https://explicit.example.com");
+            assert_eq!(login.autofill_urls[0].mode, AutofillUrlMode::Exact);
+        } else {
+            panic!("Expected Login content");
+        }
+    }
+
+    #[test]
+    fn test_perform_update_does_not_duplicate_autofill_urls() {
+        let original_item = create_test_item_data(ItemContent::Login(LoginItem {
+            email: "test@example.com".to_string(),
+            username: "testuser".to_string(),
+            password: "password123".to_string(),
+            urls: vec![],
+            totp_uri: "".to_string(),
+            passkeys: vec![],
+            autofill_urls: vec![AutofillUrl {
+                url: "https://old.example.com".to_string(),
+                mode: AutofillUrlMode::Default,
+            }],
+        }));
+        let original_bytes = original_item.clone().serialize().unwrap();
+
+        let mut updated_item = original_item.clone();
+        if let ItemContent::Login(ref mut login) = updated_item.content {
+            login.autofill_urls = vec![AutofillUrl {
+                url: "https://new.example.com".to_string(),
+                mode: AutofillUrlMode::Exact,
+            }];
+        }
+
+        let updated_bytes = ItemData::perform_update(&original_bytes, &updated_item).unwrap();
+        let final_item = ItemData::deserialize(&updated_bytes).unwrap();
+
+        if let ItemContent::Login(login) = final_item.content {
+            assert_eq!(
+                login.autofill_urls.len(),
+                1,
+                "Should have exactly 1 autofill url, not duplicated"
+            );
+            assert_eq!(login.autofill_urls[0].url, "https://new.example.com");
+            assert_eq!(login.autofill_urls[0].mode, AutofillUrlMode::Exact);
+        } else {
+            panic!("Expected Login content");
+        }
+    }
+
+    fn empty_identity(extra_sections: Vec<CustomSection>) -> IdentityItem {
+        IdentityItem {
+            full_name: String::new(),
+            email: String::new(),
+            phone_number: String::new(),
+            first_name: String::new(),
+            middle_name: String::new(),
+            last_name: String::new(),
+            birthdate: String::new(),
+            gender: String::new(),
+            extra_personal_details: vec![],
+            organization: String::new(),
+            street_address: String::new(),
+            zip_or_postal_code: String::new(),
+            city: String::new(),
+            state_or_province: String::new(),
+            country_or_region: String::new(),
+            floor: String::new(),
+            county: String::new(),
+            extra_address_details: vec![],
+            social_security_number: String::new(),
+            passport_number: String::new(),
+            license_number: String::new(),
+            website: String::new(),
+            x_handle: String::new(),
+            second_phone_number: String::new(),
+            linkedin: String::new(),
+            reddit: String::new(),
+            facebook: String::new(),
+            yahoo: String::new(),
+            instagram: String::new(),
+            extra_contact_details: vec![],
+            company: String::new(),
+            job_title: String::new(),
+            personal_website: String::new(),
+            work_phone_number: String::new(),
+            work_email: String::new(),
+            extra_work_details: vec![],
+            extra_sections,
+        }
+    }
+
+    #[test]
+    fn test_perform_update_identity_extra_sections_does_not_duplicate_across_two_updates() {
+        let original_item = create_test_item_data(ItemContent::Identity(Box::new(empty_identity(vec![
+            CustomSection {
+                section_name: "Section 1".to_string(),
+                section_fields: vec![],
+            },
+            CustomSection {
+                section_name: "Section 2".to_string(),
+                section_fields: vec![],
+            },
+        ]))));
+
+        let original_bytes = original_item.clone().serialize().unwrap();
+
+        let first_update =
+            create_test_item_data(ItemContent::Identity(Box::new(empty_identity(vec![CustomSection {
+                section_name: "Section 3".to_string(),
+                section_fields: vec![],
+            }]))));
+        let first_update_bytes = ItemData::perform_update(&original_bytes, &first_update).unwrap();
+
+        let second_update =
+            create_test_item_data(ItemContent::Identity(Box::new(empty_identity(vec![CustomSection {
+                section_name: "Section 4".to_string(),
+                section_fields: vec![],
+            }]))));
+        let second_update_bytes = ItemData::perform_update(&first_update_bytes, &second_update).unwrap();
+
+        let final_item = ItemData::deserialize(&second_update_bytes).unwrap();
+        if let ItemContent::Identity(identity) = final_item.content {
+            assert_eq!(
+                identity.extra_sections.len(),
+                1,
+                "extra_sections should not accumulate across updates"
+            );
+            assert_eq!(identity.extra_sections[0].section_name, "Section 4");
+        } else {
+            panic!("Expected Identity content");
+        }
+    }
+
+    #[test]
+    fn test_perform_update_preserves_unknown_field() {
+        let original_item = create_test_item_data(ItemContent::Note(NoteItem));
+        let mut original_as_proto = item_v1::Item::from(original_item);
+        original_as_proto.mut_unknown_fields().add_fixed64(999, 123456789);
+        let original_bytes = original_as_proto.to_vec().unwrap();
+
+        let updated_item = create_test_item_data(ItemContent::Note(NoteItem));
+        let updated_bytes = ItemData::perform_update(&original_bytes, &updated_item).unwrap();
+
+        let result_as_proto = item_v1::Item::parse_from_bytes(&updated_bytes).unwrap();
+        assert_eq!(
+            result_as_proto.unknown_fields().get(999),
+            Some(protobuf::UnknownValueRef::Fixed64(123456789))
+        );
+    }
+
+    #[test]
+    fn test_custom_icon_round_trip_when_present() {
+        let custom_icon = vec![1, 2, 3, 4];
+        let mut item = create_test_item_data(ItemContent::Note(NoteItem));
+        item.custom_icon = Some(custom_icon.clone());
+
+        let serialized = item.clone().serialize().unwrap();
+        let deserialized = ItemData::deserialize(&serialized).unwrap();
+
+        assert_eq!(deserialized.custom_icon, Some(custom_icon));
+    }
+
+    #[test]
+    fn test_custom_icon_round_trip_when_absent() {
+        let item = create_test_item_data(ItemContent::Note(NoteItem));
+        assert_eq!(item.custom_icon, None);
+
+        let serialized = item.serialize().unwrap();
+        let deserialized = ItemData::deserialize(&serialized).unwrap();
+
+        assert_eq!(deserialized.custom_icon, None);
+    }
+
+    #[test]
+    fn test_perform_update_clears_custom_icon_when_update_omits_it() {
+        let mut original_item = create_test_item_data(ItemContent::Note(NoteItem));
+        original_item.custom_icon = Some(vec![9, 9, 9]);
+        let original_bytes = item_v1::Item::from(original_item).to_vec().unwrap();
+
+        let updated_item = create_test_item_data(ItemContent::Note(NoteItem));
+        assert_eq!(updated_item.custom_icon, None);
+        let updated_bytes = ItemData::perform_update(&original_bytes, &updated_item).unwrap();
+
+        let result = ItemData::deserialize(&updated_bytes).unwrap();
+        assert_eq!(result.custom_icon, None);
+    }
+
+    #[test]
+    fn test_perform_update_replaces_custom_icon_when_update_sets_it() {
+        let mut original_item = create_test_item_data(ItemContent::Note(NoteItem));
+        original_item.custom_icon = Some(vec![9, 9, 9]);
+        let original_bytes = item_v1::Item::from(original_item).to_vec().unwrap();
+
+        let updated_custom_icon = vec![1, 1, 1];
+        let mut updated_item = create_test_item_data(ItemContent::Note(NoteItem));
+        updated_item.custom_icon = Some(updated_custom_icon.clone());
+        let updated_bytes = ItemData::perform_update(&original_bytes, &updated_item).unwrap();
+
+        let result = ItemData::deserialize(&updated_bytes).unwrap();
+        assert_eq!(result.custom_icon, Some(updated_custom_icon));
     }
 }

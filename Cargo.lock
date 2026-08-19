@@ -3135,13 +3135,14 @@ name = "proton-pass-derive"
 version = "1.8.0"
 dependencies = [
  "quote",
- "syn 2.0.119",
+ "syn 3.0.3",
 ]
 
 [[package]]
 name = "proton-pass-mobile"
 version = "1.8.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "proton-pass-common",
  "proton-pass-derive",
@@ -3189,6 +3190,7 @@ dependencies = [
  "async-trait",
  "js-sys",
  "proton-pass-common",
+ "proton-pass-types",
  "serde",
  "tsify",
  "wasm-bindgen",

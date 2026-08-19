@@ -3,6 +3,7 @@ use wasm_bindgen::prelude::*;
 mod common;
 #[cfg(feature = "resize-image")]
 pub mod image;
+mod proto_utils;
 
 #[cfg(feature = "web_password")]
 mod password;
@@ -20,3 +21,6 @@ mod username;
 pub fn library_version() -> String {
     proton_pass_common::library_version()
 }
+
+pub use proto_utils::*;
+pub use proton_pass_types::*;

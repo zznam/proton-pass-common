@@ -25,6 +25,7 @@ proton-pass-common = { path = "../proton-pass-common", features = ["uniffi", "re
 proton-pass-derive = { path = "../proton-pass-derive" }
 proton-pass-types = { path = "../proton-pass-types", features = ["uniffi"] }
 
+anyhow.workspace = true
 async-trait.workspace = true
 tokio.workspace = true
 uniffi.workspace = true

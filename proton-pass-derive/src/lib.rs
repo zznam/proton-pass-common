@@ -169,6 +169,39 @@ pub fn ffi_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
+/// Attribute macro for FFI id newtypes (single-field tuple structs wrapping a primitive)
+///
+/// Automatically applies the appropriate derives for enabled FFI targets:
+/// - uniffi: registers the type as a custom newtype via `uniffi::custom_newtype!`
+/// - wasm: derives tsify::Tsify, serde::Serialize, serde::Deserialize
+///
+/// # Example
+/// ```
+/// #[ffi_id_type]
+/// pub struct MyId(pub(crate) String);
+/// ```
+#[proc_macro_attribute]
+pub fn ffi_id_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as syn::ItemStruct);
+
+    let ident = &input.ident;
+    let inner_type = match &input.fields {
+        syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => &fields.unnamed[0].ty,
+        _ => panic!("ffi_id_type can only be used on single-field tuple structs"),
+    };
+
+    let expanded = quote! {
+        #[cfg_attr(feature = "wasm", derive(serde::Serialize, serde::Deserialize, tsify::Tsify))]
+        #[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+        #input
+
+        #[cfg(feature = "uniffi")]
+        uniffi::custom_newtype!(#ident, #inner_type);
+    };
+
+    TokenStream::from(expanded)
+}
+
 /// Attribute macro for FFI object/class types
 ///
 /// Automatically applies the appropriate derives for enabled FFI targets:

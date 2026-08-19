@@ -54,8 +54,13 @@ macro_rules! implement_custom_methods {
     };
 }
 
+pub use models::folder::*;
+pub use models::ids::*;
 pub use models::item::*;
+pub use models::vault::*;
 pub use protobuf;
 
 implement_custom_methods!(protos::item::item_v1::Item);
 implement_custom_methods!(protos::file::file_v1::FileMetadata);
+implement_custom_methods!(protos::folder::folder_v1::Folder);
+implement_custom_methods!(protos::vault::vault_v1::Vault);

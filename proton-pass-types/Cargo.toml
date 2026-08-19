@@ -14,13 +14,13 @@ wasm = ["dep:tsify", "dep:wasm-bindgen"]
 [dependencies]
 proton-pass-derive = { path = "../proton-pass-derive" }
 
-uniffi = { workspace = true, optional = true }
+anyhow.workspace = true
+serde.workspace = true
 tsify = { workspace = true, optional = true }
+uniffi = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 
-anyhow = "1.0"
 protobuf = "3.7"
-serde = { workspace = true }
 uuid = { version = "1.23", features = ["v4", "js"] }
 
 [build-dependencies]
