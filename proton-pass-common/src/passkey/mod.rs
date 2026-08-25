@@ -2,7 +2,7 @@ mod authentication_parser;
 pub mod fetcher;
 mod generate;
 mod parser;
-mod passkey_handling;
+pub(crate) mod passkey_handling;
 mod protonpasskey;
 mod protonpasskeydeserializer;
 mod protonpasskeyserializer;
@@ -14,7 +14,11 @@ pub use generate::{
     CreatePasskeyData, CreatePasskeyIosRequest, CreatePasskeyPrfInput, CreatePasskeyPrfOutput, CreatePasskeyPrfValues,
     CreatePasskeyResponse, generate_passkey_for_domain, generate_passkey_for_ios, parse_create_passkey_data,
 };
-pub use protonpasskey::ProtonPassKey;
+pub use protonpasskey::{
+    ProtonAlgorithm, ProtonInteger, ProtonKey, ProtonKeyType, ProtonLabel, ProtonPassCredentialExtensions,
+    ProtonPassKey, ProtonPassStoredHmacSecret, ProtonRegisteredLabelKeyType, ProtonRegisteredLabelWithPrivateAlgorithm,
+    ProtonValue,
+};
 pub use resolve::{
     AuthenticateWithPasskeyAndroidRequest, AuthenticateWithPasskeyIosRequest, AuthenticateWithPasskeyIosResponse,
     ResolveChallengeResponse, resolve_challenge_for_android, resolve_challenge_for_domain, resolve_challenge_for_ios,

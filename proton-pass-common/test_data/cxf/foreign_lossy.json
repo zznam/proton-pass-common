@@ -1,0 +1,41 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "foreign-app",
+  "exporterDisplayName": "Foreign App",
+  "timestamp": 1650000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "bob",
+      "email": "bob@example.com",
+      "collections": [],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "Foreign Login",
+          "credentials": [
+            {
+              "type": "basic-auth",
+              "username": { "fieldType": "string", "value": "bob" },
+              "password": { "fieldType": "concealed-string", "value": "s3cret" }
+            },
+            {
+              "type": "totp",
+              "secret": "JBSWY3DPEHPK3PXP",
+              "period": 30,
+              "digits": 6,
+              "algorithm": "sha1"
+            },
+            {
+              "type": "totp",
+              "secret": "GEZDGNBVGY3TQOJQ",
+              "period": 30,
+              "digits": 6,
+              "algorithm": "sha1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

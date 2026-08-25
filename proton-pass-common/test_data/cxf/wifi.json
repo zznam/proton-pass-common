@@ -1,0 +1,28 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "example.com",
+  "exporterDisplayName": "Example Exporter",
+  "timestamp": 1700000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "",
+      "email": "",
+      "collections": [],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "My WiFi",
+          "credentials": [
+            {
+              "type": "wifi",
+              "ssid": { "fieldType": "string", "value": "MyNetwork" },
+              "networkSecurityType": { "fieldType": "wifi-network-security-type", "value": "wpa2-personal" },
+              "passphrase": { "fieldType": "concealed-string", "value": "hunter2" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

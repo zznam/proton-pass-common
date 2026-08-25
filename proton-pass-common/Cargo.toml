@@ -7,10 +7,26 @@ version.workspace = true
 doctest = false
 
 [features]
-default = []
+default = ["cxf"]
 uniffi = ["dep:uniffi", "proton-pass-totp/uniffi"]
 wasm = ["dep:tsify", "dep:wasm-bindgen", "proton-pass-totp/wasm"]
 resize-image = ["dep:image", "dep:zenwebp"]
+cxf = [
+    "dep:credential-exchange-format",
+    "dep:proton-pass-types",
+    "dep:chrono",
+    "dep:p256",
+    "dep:ed25519-dalek",
+    "dep:pkcs8",
+]
+cxp = [
+    "cxf",
+    "dep:credential-exchange-protocol",
+    "dep:hpke",
+    "dep:jose-jwk",
+    "dep:parking_lot",
+    "dep:zeroize",
+]
 
 [dependencies]
 uniffi = { workspace = true, optional = true }
@@ -18,10 +34,24 @@ tsify = { workspace = true, optional = true }
 wasm-bindgen = { workspace = true, optional = true }
 proton-pass-derive = { path = "../proton-pass-derive" }
 proton-pass-totp = { path = "../proton-pass-totp" }
+proton-pass-types = { path = "../proton-pass-types", optional = true }
 
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+
+# CXF/CXP dependencies
+credential-exchange-format = { git = "https://github.com/bitwarden/credential-exchange", rev = "22a87d9852ae64a659ae37774bd9194fd362bdde", optional = true }
+credential-exchange-protocol = { git = "https://github.com/bitwarden/credential-exchange", rev = "22a87d9852ae64a659ae37774bd9194fd362bdde", optional = true }
+
+chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
+ed25519-dalek = { version = "2", features = ["pkcs8"], optional = true }
+hpke = { version = "0.14", default-features = false, features = ["alloc", "getrandom", "x25519", "chacha"], optional = true }
+jose-jwk = { version = "0.1", default-features = false, optional = true }
+p256 = { version = "0.13", optional = true }
+parking_lot = { version = "0.12", optional = true }
+pkcs8 = { version = "0.10", default-features = false, features = ["alloc"], optional = true }
+zeroize = { version = "1", optional = true }
 
 # Passkeys dependency
 passkey = { git = "https://github.com/1Password/passkey-rs.git", rev = "46f3a936671d80842d1808871780a3a331bffbdb" }
@@ -29,14 +59,14 @@ passkey-authenticator = { git = "https://github.com/1Password/passkey-rs.git", r
 passkey-types = { git = "https://github.com/1Password/passkey-rs.git", rev = "46f3a936671d80842d1808871780a3a331bffbdb", features = ["serialize_bytes_as_base64_string"] }
 public-suffix = { git = "https://github.com/1Password/passkey-rs.git", rev = "46f3a936671d80842d1808871780a3a331bffbdb" }
 
-coset = "0.4.0"
+coset = "0.4.2"
 email_address = "0.2.9"
 file-format = { version = "0.29.0", features = ["reader"] }
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"], optional = true }
 lazy_static = "1.5.0"
 luhn = "1.0.1"
 qrcode = "0.14.1"
-rand = "0.9.0"
+rand = "0.9.5"
 regex-lite = "0.1.6"
 rmp-serde = "1.3.0"
 ssh-key = { version = "0.6", features = ["std", "crypto", "ed25519", "rsa", "encryption", "alloc"] }

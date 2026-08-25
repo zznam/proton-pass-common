@@ -1,6 +1,5 @@
 use file_format::FileFormat;
 use head_tail_reader::HeadTailReader;
-use proton_pass_derive::ffi_type;
 
 mod associations;
 mod head_tail_reader;
@@ -9,7 +8,6 @@ mod head_tail_reader;
 #[allow(dead_code)]
 mod sanitize_filename;
 
-#[ffi_type]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum FileGroup {
     Image,

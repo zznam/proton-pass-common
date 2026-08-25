@@ -1,0 +1,33 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "example.com",
+  "exporterDisplayName": "Example Exporter",
+  "timestamp": 1700000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "",
+      "email": "",
+      "collections": [],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "My SSH Key",
+          "credentials": [
+            {
+              "type": "ssh-key",
+              "keyType": "ssh-ed25519",
+              "privateKey": "cHJpdmF0ZS1rZXktZGF0YQ"
+            },
+            {
+              "type": "custom-fields",
+              "fields": [
+                { "fieldType": "string", "value": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5", "label": "public_key" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

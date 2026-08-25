@@ -5,6 +5,11 @@ uniffi::setup_scaffolding!();
 
 pub mod alias_prefix;
 pub mod creditcard;
+
+#[cfg(feature = "cxf")]
+pub mod cxf;
+#[cfg(feature = "cxp")]
+pub mod cxp;
 pub mod domain;
 pub mod email;
 pub mod file;

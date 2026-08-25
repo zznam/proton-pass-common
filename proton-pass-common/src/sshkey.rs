@@ -11,7 +11,7 @@ pub enum SshKeyError {
     InvalidPassword(String),
 }
 
-#[ffi_type]
+#[ffi_type(only_web)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SshKeyType {
     RSA2048,
@@ -29,7 +29,7 @@ impl SshKeyType {
     }
 }
 
-#[ffi_type]
+#[ffi_type(only_web)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SshKeyPair {
     pub public_key: String,

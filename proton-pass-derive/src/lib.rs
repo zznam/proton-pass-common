@@ -7,10 +7,13 @@ use syn::{
 };
 
 /// Parsed attributes for FFI type macros
+#[derive(Default)]
 struct FfiTypeAttrs {
     mobile_name: Option<String>,
     web_name: Option<String>,
     skip_serde_derive: bool,
+    only_web: bool,
+    only_mobile: bool,
 }
 
 impl Parse for FfiTypeAttrs {
@@ -18,12 +21,24 @@ impl Parse for FfiTypeAttrs {
         let mut mobile_name = None;
         let mut web_name = None;
         let mut skip_serde_derive = false;
+        let mut only_web = false;
+        let mut only_mobile = false;
+        let mut only_web_span = None;
+        let mut only_mobile_span = None;
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
 
             match key.to_string().as_str() {
                 "skip_serde_derive" => skip_serde_derive = true,
+                "only_web" => {
+                    only_web = true;
+                    only_web_span = Some(key.span());
+                }
+                "only_mobile" => {
+                    only_mobile = true;
+                    only_mobile_span = Some(key.span());
+                }
                 "mobile_name" => {
                     input.parse::<Token![=]>()?;
                     let value: LitStr = input.parse()?;
@@ -42,10 +57,31 @@ impl Parse for FfiTypeAttrs {
             }
         }
 
+        if only_web && only_mobile {
+            return Err(syn::Error::new(
+                only_mobile_span.unwrap(),
+                "only_web and only_mobile are mutually exclusive",
+            ));
+        }
+        if only_web && mobile_name.is_some() {
+            return Err(syn::Error::new(
+                only_web_span.unwrap(),
+                "mobile_name has no effect with only_web",
+            ));
+        }
+        if only_mobile && web_name.is_some() {
+            return Err(syn::Error::new(
+                only_mobile_span.unwrap(),
+                "web_name has no effect with only_mobile",
+            ));
+        }
+
         Ok(FfiTypeAttrs {
             mobile_name,
             web_name,
             skip_serde_derive,
+            only_web,
+            only_mobile,
         })
     }
 }
@@ -75,6 +111,11 @@ pub fn derive_error(input: TokenStream) -> TokenStream {
 /// - uniffi: derives uniffi::Record for structs, uniffi::Enum for enums
 /// - wasm: derives tsify::Tsify, serde::Serialize, serde::Deserialize
 ///
+/// Pass `only_web` or `only_mobile` when a type is only ever consumed directly by one FFI
+/// target (the other target either never sees it, or defines its own identically-named mirror
+/// type and converts via `From`). This avoids generating dead bindings that can collide by name
+/// with a consuming crate's own FFI-exported types.
+///
 /// # Examples
 /// ```
 /// #[ffi_type]
@@ -87,15 +128,17 @@ pub fn derive_error(input: TokenStream) -> TokenStream {
 ///     Variant1,
 ///     Variant2(String),
 /// }
+///
+/// // Only proton-pass-web uses this type directly; proton-pass-mobile mirrors it instead.
+/// #[ffi_type(only_web)]
+/// pub struct WebOnlyType {
+///     pub field: String,
+/// }
 /// ```
 #[proc_macro_attribute]
 pub fn ffi_type(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attrs = if attr.is_empty() {
-        FfiTypeAttrs {
-            mobile_name: None,
-            web_name: None,
-            skip_serde_derive: false,
-        }
+        FfiTypeAttrs::default()
     } else {
         parse_macro_input!(attr as FfiTypeAttrs)
     };
@@ -106,6 +149,12 @@ pub fn ffi_type(attr: TokenStream, item: TokenStream) -> TokenStream {
         Item::Struct(_) => quote! { uniffi::Record },
         Item::Enum(_) => quote! { uniffi::Enum },
         _ => panic!("ffi_type can only be used on structs or enums"),
+    };
+
+    let mobile_derive = if attrs.only_web {
+        quote! {}
+    } else {
+        quote! { #[cfg_attr(feature = "uniffi", derive(#uniffi_derive))] }
     };
 
     let mobile_rename = if let Some(name) = attrs.mobile_name {
@@ -120,17 +169,25 @@ pub fn ffi_type(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! {}
     };
 
-    let wasm_derive = if attrs.skip_serde_derive {
+    let wasm_derive = if attrs.only_mobile {
+        quote! {}
+    } else if attrs.skip_serde_derive {
         quote! { #[cfg_attr(feature = "wasm", derive(tsify::Tsify))] }
     } else {
         quote! { #[cfg_attr(feature = "wasm", derive(tsify::Tsify, serde::Serialize, serde::Deserialize))] }
     };
 
+    let wasm_abi = if attrs.only_mobile {
+        quote! {}
+    } else {
+        quote! { #[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))] }
+    };
+
     let expanded = quote! {
-        #[cfg_attr(feature = "uniffi", derive(#uniffi_derive))]
+        #mobile_derive
         #mobile_rename
         #wasm_derive
-        #[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
+        #wasm_abi
         #web_rename
         #input
     };
@@ -208,6 +265,10 @@ pub fn ffi_id_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// - uniffi: derives uniffi::Object
 /// - wasm: Currently not applicable for objects (stateful classes)
 ///
+/// Pass `only_mobile` to make the (already mobile-only) behavior explicit, or `only_web` to
+/// suppress the `uniffi::Object` derive entirely - e.g. when the type is exposed to wasm via
+/// hand-written annotations elsewhere and shouldn't also be scaffolded for uniffi.
+///
 /// # Example
 /// ```
 /// #[ffi_object]
@@ -223,16 +284,18 @@ pub fn ffi_id_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ffi_object(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attrs = if attr.is_empty() {
-        FfiTypeAttrs {
-            mobile_name: None,
-            web_name: None,
-            skip_serde_derive: false,
-        }
+        FfiTypeAttrs::default()
     } else {
         parse_macro_input!(attr as FfiTypeAttrs)
     };
 
     let input = parse_macro_input!(item as Item);
+
+    let mobile_derive = if attrs.only_web {
+        quote! {}
+    } else {
+        quote! { #[cfg_attr(feature = "uniffi", derive(uniffi::Object))] }
+    };
 
     let mobile_rename = if let Some(name) = attrs.mobile_name {
         quote! { #[cfg_attr(feature = "uniffi", uniffi(export_name = #name))] }
@@ -241,7 +304,7 @@ pub fn ffi_object(attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     let expanded = quote! {
-        #[cfg_attr(feature = "uniffi", derive(uniffi::Object))]
+        #mobile_derive
         #mobile_rename
         #input
     };

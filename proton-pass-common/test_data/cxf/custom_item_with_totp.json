@@ -1,0 +1,36 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "example.com",
+  "exporterDisplayName": "Example Exporter",
+  "timestamp": 1700000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "",
+      "email": "",
+      "collections": [],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "My Custom Item",
+          "credentials": [
+            {
+              "type": "custom-fields",
+              "label": "Section A",
+              "fields": [
+                { "fieldType": "string", "value": "value1", "label": "field1" }
+              ]
+            },
+            {
+              "type": "totp",
+              "secret": "MFRGGZDFMZTWQ2LK",
+              "period": 30,
+              "digits": 6,
+              "algorithm": "sha1"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

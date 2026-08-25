@@ -2,6 +2,8 @@
 
 mod alias;
 mod creditcard;
+mod cxf;
+mod cxp;
 mod domain;
 mod email;
 mod file;
@@ -32,6 +34,8 @@ pub fn library_version() -> String {
 
 pub use alias::*;
 pub use creditcard::*;
+pub use cxf::*;
+pub use cxp::*;
 pub use domain::*;
 pub use email::*;
 pub use file::*;

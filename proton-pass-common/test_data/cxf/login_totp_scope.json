@@ -1,0 +1,45 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "example.com",
+  "exporterDisplayName": "Example Exporter",
+  "timestamp": 1700000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "alice",
+      "email": "alice@example.com",
+      "collections": [
+        {
+          "id": "coll-01",
+          "title": "Personal",
+          "items": [{ "item": "item-01" }]
+        }
+      ],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "My Login",
+          "scope": {
+            "urls": ["https://example.com"],
+            "androidApps": []
+          },
+          "credentials": [
+            {
+              "type": "basic-auth",
+              "username": { "fieldType": "string", "value": "alice@example.com" },
+              "password": { "fieldType": "concealed-string", "value": "hunter2" }
+            },
+            {
+              "type": "totp",
+              "secret": "JBSWY3DPEHPK3PXP",
+              "period": 30,
+              "digits": 6,
+              "algorithm": "sha1",
+              "issuer": "Example"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

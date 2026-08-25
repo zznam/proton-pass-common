@@ -1,0 +1,56 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "example.com",
+  "exporterDisplayName": "Example Exporter",
+  "timestamp": 1700000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "",
+      "email": "",
+      "collections": [],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "My Identity",
+          "credentials": [
+            {
+              "type": "person-name",
+              "given": { "fieldType": "string", "value": "Jane" },
+              "given2": { "fieldType": "string", "value": "Q" },
+              "surname": { "fieldType": "string", "value": "Doe" }
+            },
+            {
+              "type": "address",
+              "streetAddress": { "fieldType": "string", "value": "1 Main St" },
+              "postalCode": { "fieldType": "string", "value": "12345" },
+              "city": { "fieldType": "string", "value": "Springfield" },
+              "territory": { "fieldType": "subdivision-code", "value": "CA" },
+              "country": { "fieldType": "country-code", "value": "US" },
+              "tel": { "fieldType": "string", "value": "555-1234" }
+            },
+            {
+              "type": "drivers-license",
+              "licenseNumber": { "fieldType": "string", "value": "D7654321" }
+            },
+            {
+              "type": "passport",
+              "passportNumber": { "fieldType": "string", "value": "P1234567" }
+            },
+            {
+              "type": "identity-document",
+              "identificationNumber": { "fieldType": "string", "value": "123-45-6789" }
+            },
+            {
+              "type": "custom-fields",
+              "fields": [
+                { "fieldType": "string", "value": "Acme Corp", "label": "organization" },
+                { "fieldType": "string", "value": "jane@example.com", "label": "email" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

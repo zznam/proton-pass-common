@@ -1,0 +1,30 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "example.com",
+  "exporterDisplayName": "Example Exporter",
+  "timestamp": 1700000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "",
+      "email": "",
+      "collections": [],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "My Card",
+          "credentials": [
+            {
+              "type": "credit-card",
+              "number": { "fieldType": "concealed-string", "value": "4111111111111111" },
+              "fullName": { "fieldType": "string", "value": "John Doe" },
+              "cardType": { "fieldType": "string", "value": "Visa" },
+              "verificationNumber": { "fieldType": "concealed-string", "value": "123" },
+              "expiryDate": { "fieldType": "year-month", "value": "2030-05" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

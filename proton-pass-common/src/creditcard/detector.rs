@@ -1,8 +1,6 @@
 use luhn::valid;
-use proton_pass_derive::ffi_type;
 use regex_lite::Regex;
 
-#[ffi_type]
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum CreditCardType {
     Visa,

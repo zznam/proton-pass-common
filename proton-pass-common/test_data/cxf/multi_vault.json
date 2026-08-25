@@ -1,0 +1,33 @@
+{
+  "version": { "major": 1, "minor": 0 },
+  "exporterRpId": "example.com",
+  "exporterDisplayName": "Example Exporter",
+  "timestamp": 1700000000,
+  "accounts": [
+    {
+      "id": "account-01",
+      "username": "",
+      "email": "",
+      "collections": [
+        { "id": "coll-01", "title": "Vault One", "items": [{ "item": "item-01" }] },
+        { "id": "coll-02", "title": "Vault Two", "items": [{ "item": "item-02" }] }
+      ],
+      "items": [
+        {
+          "id": "item-01",
+          "title": "Item One",
+          "credentials": [
+            { "type": "note", "content": { "fieldType": "string", "value": "Note one" } }
+          ]
+        },
+        {
+          "id": "item-02",
+          "title": "Item Two",
+          "credentials": [
+            { "type": "note", "content": { "fieldType": "string", "value": "Note two" } }
+          ]
+        }
+      ]
+    }
+  ]
+}

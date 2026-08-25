@@ -5,6 +5,7 @@ use crate::common::{WasmBoolDict, vec_to_uint8_array};
 use passkey::WasmCreatePasskeyData;
 use passkey::{PasskeyManager, WasmGeneratePasskeyResponse, WasmResolvePasskeyChallengeResponse};
 
+mod cxf;
 mod passkey;
 mod passkey_fetcher;
 mod share;

@@ -1,7 +1,7 @@
 use proton_pass_derive::ffi_type;
 use std::collections::{HashMap, HashSet};
 
-#[ffi_type]
+#[ffi_type(only_web)]
 #[derive(Debug, Clone)]
 pub struct Share {
     pub share_id: String,
@@ -16,7 +16,7 @@ pub struct Share {
     pub create_time: u32,
 }
 
-#[ffi_type]
+#[ffi_type(only_web)]
 #[derive(Debug, Clone, Hash, Eq, PartialEq)]
 pub enum TargetType {
     Vault,
