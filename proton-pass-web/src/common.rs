@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
-pub struct WasmBoolDict(pub std::collections::HashMap<String, bool>);
+pub struct WasmBoolDict(pub HashMap<String, bool>);
 
 #[allow(dead_code)]
 pub fn vec_to_uint8_array(source: Vec<u8>) -> js_sys::Uint8Array {

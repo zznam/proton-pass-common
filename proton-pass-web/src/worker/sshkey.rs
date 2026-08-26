@@ -4,6 +4,7 @@ pub use proton_pass_common::sshkey::SshKeyPair as WasmSshKeyPair;
 use proton_pass_common::sshkey::{
     SshKeyType, decrypt_private_key, generate_ssh_key, validate_private_key, validate_public_key,
 };
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -19,10 +20,12 @@ pub fn validate_private_ssh_key(key: String) -> Result<(), JsError> {
 #[wasm_bindgen]
 pub fn generate_ssh_key_pair(
     comment: String,
-    key_type: SshKeyType,
+    key_type: Ts<SshKeyType>,
     passphrase: Option<String>,
-) -> Result<WasmSshKeyPair, JsError> {
-    generate_ssh_key(comment, key_type, passphrase).map_err(|e| JsError::new(&format!("{:?}", e)))
+) -> Result<Ts<WasmSshKeyPair>, JsError> {
+    let key_type = key_type.to_rust()?;
+    let key_pair = generate_ssh_key(comment, key_type, passphrase).map_err(|e| JsError::new(&format!("{:?}", e)))?;
+    Ok(key_pair.into_ts()?)
 }
 
 #[wasm_bindgen]

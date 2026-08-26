@@ -6,6 +6,7 @@ use proton_authenticator::generator::{
 };
 use proton_authenticator::{AuthenticatorCodeResponse, LogLevel, emit_log_message};
 use std::sync::Arc;
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -70,12 +71,12 @@ impl WebTotpGenerator {
     #[wasm_bindgen]
     pub async fn start(
         &self,
-        entries: Vec<WasmAuthenticatorEntryModel>,
+        entries: Vec<Ts<WasmAuthenticatorEntryModel>>,
         callback: js_sys::Function,
     ) -> Result<WebTotpGenerationHandle, JsError> {
         let mut as_entries = vec![];
         for entry in entries {
-            as_entries.push(entry.to_entry()?);
+            as_entries.push(entry.to_rust()?.to_entry()?);
         }
         let cb = WasmCallback { callback };
         let handle = self.inner.start_async(as_entries, cb).await;
@@ -97,8 +98,10 @@ impl TotpGeneratorCallback for WasmCallback {
 
         for (idx, code) in codes.into_iter().enumerate() {
             let mapped = WasmAuthenticatorCodeResponse::from(code);
-            let as_js_value: JsValue = mapped.into();
-            res.set(idx as u32, as_js_value);
+            let Ok(as_ts) = mapped.into_ts() else {
+                continue;
+            };
+            res.set(idx as u32, as_ts.js_value());
         }
 
         let _ = self.callback.call1(&JsValue::NULL, &res);

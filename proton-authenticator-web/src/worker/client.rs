@@ -9,18 +9,17 @@ use proton_authenticator::{
     AuthenticatorEntryUpdateContents as CommonUpdateContents,
 };
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn entry_from_uri(uri: String) -> JsResult<WasmAuthenticatorEntryModel> {
+pub fn entry_from_uri(uri: String) -> JsResult<Ts<WasmAuthenticatorEntryModel>> {
     let entry = AuthenticatorEntry::from_uri(&uri, None)?;
     let as_model = WasmAuthenticatorEntryModel::from(entry);
-    Ok(as_model)
+    Ok(as_model.into_ts()?)
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorEntryTotpCreateParameters {
     pub name: String,
     pub secret: String,
@@ -47,15 +46,15 @@ impl From<WasmAuthenticatorEntryTotpCreateParameters> for CommonTotpCreateParame
 
 #[wasm_bindgen]
 pub fn new_totp_entry_from_params(
-    params: WasmAuthenticatorEntryTotpCreateParameters,
-) -> JsResult<WasmAuthenticatorEntryModel> {
-    let mapped_params = CommonTotpCreateParameters::from(params);
+    params: Ts<WasmAuthenticatorEntryTotpCreateParameters>,
+) -> JsResult<Ts<WasmAuthenticatorEntryModel>> {
+    let mapped_params = CommonTotpCreateParameters::from(params.to_rust()?);
     let entry = AuthenticatorEntry::new_totp_entry_from_params(mapped_params)?;
-    Ok(entry.into())
+    let as_model: WasmAuthenticatorEntryModel = entry.into();
+    Ok(as_model.into_ts()?)
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorEntrySteamCreateParameters {
     pub name: String,
     pub secret: String,
@@ -74,15 +73,15 @@ impl From<WasmAuthenticatorEntrySteamCreateParameters> for CommonSteamCreatePara
 
 #[wasm_bindgen]
 pub fn new_steam_entry_from_params(
-    params: WasmAuthenticatorEntrySteamCreateParameters,
-) -> JsResult<WasmAuthenticatorEntryModel> {
-    let mapped_params = CommonSteamCreateParameters::from(params);
+    params: Ts<WasmAuthenticatorEntrySteamCreateParameters>,
+) -> JsResult<Ts<WasmAuthenticatorEntryModel>> {
+    let mapped_params = CommonSteamCreateParameters::from(params.to_rust()?);
     let entry = AuthenticatorEntry::new_steam_entry_from_params(mapped_params)?;
-    Ok(entry.into())
+    let as_model: WasmAuthenticatorEntryModel = entry.into();
+    Ok(as_model.into_ts()?)
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorEntryUpdateContents {
     pub name: String,
     pub secret: String,
@@ -111,17 +110,17 @@ impl From<WasmAuthenticatorEntryUpdateContents> for CommonUpdateContents {
 
 #[wasm_bindgen]
 pub fn update_entry(
-    entry: WasmAuthenticatorEntryModel,
-    update: WasmAuthenticatorEntryUpdateContents,
-) -> JsResult<WasmAuthenticatorEntryModel> {
-    let mut as_entry = entry.to_entry()?;
-    let mapped_params = CommonUpdateContents::from(update);
+    entry: Ts<WasmAuthenticatorEntryModel>,
+    update: Ts<WasmAuthenticatorEntryUpdateContents>,
+) -> JsResult<Ts<WasmAuthenticatorEntryModel>> {
+    let mut as_entry = entry.to_rust()?.to_entry()?;
+    let mapped_params = CommonUpdateContents::from(update.to_rust()?);
     as_entry.update(mapped_params)?;
-    Ok(as_entry.into())
+    let as_model: WasmAuthenticatorEntryModel = as_entry.into();
+    Ok(as_model.into_ts()?)
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorCodeResponse {
     pub current_code: String,
     pub next_code: String,
@@ -139,18 +138,17 @@ impl From<AuthenticatorCodeResponse> for WasmAuthenticatorCodeResponse {
 }
 
 #[wasm_bindgen]
-pub fn generate_code(model: WasmAuthenticatorEntryModel, time: u64) -> JsResult<WasmAuthenticatorCodeResponse> {
-    let as_entry = model.to_entry()?;
+pub fn generate_code(model: Ts<WasmAuthenticatorEntryModel>, time: u64) -> JsResult<Ts<WasmAuthenticatorCodeResponse>> {
+    let as_entry = model.to_rust()?.to_entry()?;
     let res = proton_authenticator::AuthenticatorClient.generate_codes(&[as_entry], time)?;
     if let Some(first) = res.into_iter().next() {
-        Ok(WasmAuthenticatorCodeResponse::from(first))
+        Ok(WasmAuthenticatorCodeResponse::from(first).into_ts()?)
     } else {
         Err(JsError::new("Authenticator could not generate a code"))
     }
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum TotpAlgorithm {
     SHA1,
     SHA256,
@@ -178,7 +176,6 @@ impl From<TotpAlgorithm> for Algorithm {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorEntryTotpParameters {
     pub secret: String,
     pub issuer: String,
@@ -200,19 +197,21 @@ impl From<AuthenticatorEntryTotpParameters> for WasmAuthenticatorEntryTotpParame
 }
 
 #[wasm_bindgen]
-pub fn get_totp_parameters(model: WasmAuthenticatorEntryModel) -> JsResult<WasmAuthenticatorEntryTotpParameters> {
-    let as_entry = model.to_entry()?;
+pub fn get_totp_parameters(
+    model: Ts<WasmAuthenticatorEntryModel>,
+) -> JsResult<Ts<WasmAuthenticatorEntryTotpParameters>> {
+    let as_entry = model.to_rust()?.to_entry()?;
     match as_entry.get_totp_parameters() {
-        Ok(params) => Ok(WasmAuthenticatorEntryTotpParameters::from(params)),
+        Ok(params) => Ok(WasmAuthenticatorEntryTotpParameters::from(params).into_ts()?),
         Err(e) => Err(JsError::new(&format!("{e:?}"))),
     }
 }
 
 #[wasm_bindgen]
-pub fn serialize_entries(models: Vec<WasmAuthenticatorEntryModel>) -> JsResult<Vec<Uint8Array>> {
+pub fn serialize_entries(models: Vec<Ts<WasmAuthenticatorEntryModel>>) -> JsResult<Vec<Uint8Array>> {
     let mut serialized_entries = Vec::with_capacity(models.len());
     for model in models {
-        let as_entry = model.to_entry()?;
+        let as_entry = model.to_rust()?.to_entry()?;
         let serialized = as_entry.serialize()?;
         serialized_entries.push(vec_to_uint8_array(serialized));
     }
@@ -221,7 +220,7 @@ pub fn serialize_entries(models: Vec<WasmAuthenticatorEntryModel>) -> JsResult<V
 }
 
 #[wasm_bindgen]
-pub fn deserialize_entries(serialized_entries: Vec<Uint8Array>) -> JsResult<Vec<WasmAuthenticatorEntryModel>> {
+pub fn deserialize_entries(serialized_entries: Vec<Uint8Array>) -> JsResult<Vec<Ts<WasmAuthenticatorEntryModel>>> {
     let mut deserialized_entries = Vec::with_capacity(serialized_entries.len());
     for entry in serialized_entries {
         let entry_as_bytes = entry.to_vec();
@@ -229,27 +228,30 @@ pub fn deserialize_entries(serialized_entries: Vec<Uint8Array>) -> JsResult<Vec<
             .map_err(|e| JsError::new(&format!("failed to deserialize entry: {e:?}")))?;
 
         let as_model = WasmAuthenticatorEntryModel::from(as_entry);
-        deserialized_entries.push(as_model);
+        deserialized_entries.push(as_model.into_ts()?);
     }
 
     Ok(deserialized_entries)
 }
 
 #[wasm_bindgen]
-pub fn export_entries(models: Vec<WasmAuthenticatorEntryModel>) -> JsResult<String> {
+pub fn export_entries(models: Vec<Ts<WasmAuthenticatorEntryModel>>) -> JsResult<String> {
     let mut mapped = vec![];
     for entry in models {
-        mapped.push(entry.to_entry()?);
+        mapped.push(entry.to_rust()?.to_entry()?);
     }
     let client = AuthenticatorClient::new();
     Ok(client.export_entries(mapped)?)
 }
 
 #[wasm_bindgen]
-pub fn export_entries_with_password(models: Vec<WasmAuthenticatorEntryModel>, password: String) -> JsResult<String> {
+pub fn export_entries_with_password(
+    models: Vec<Ts<WasmAuthenticatorEntryModel>>,
+    password: String,
+) -> JsResult<String> {
     let mut mapped = vec![];
     for entry in models {
-        mapped.push(entry.to_entry()?);
+        mapped.push(entry.to_rust()?.to_entry()?);
     }
     let client = AuthenticatorClient::new();
     Ok(client.export_entries_with_password(mapped, &password)?)

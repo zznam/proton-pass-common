@@ -116,6 +116,12 @@ pub fn derive_error(input: TokenStream) -> TokenStream {
 /// type and converts via `From`). This avoids generating dead bindings that can collide by name
 /// with a consuming crate's own FFI-exported types.
 ///
+/// Note: this no longer derives `tsify(into_wasm_abi, from_wasm_abi)` (deprecated, leaks memory
+/// on (de)serialization failure, see https://github.com/madonoharu/tsify/issues/65).
+/// Wherever a generated type crosses a `#[wasm_bindgen]` function boundary (as a parameter or
+/// return type, including inside `Vec<_>`/`Option<_>`), wrap it in `tsify::Ts<_>` at the
+/// call site and convert with `.to_rust()` / `.into_ts()` inside the function body.
+///
 /// # Examples
 /// ```
 /// #[ffi_type]
@@ -177,17 +183,10 @@ pub fn ffi_type(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! { #[cfg_attr(feature = "wasm", derive(tsify::Tsify, serde::Serialize, serde::Deserialize))] }
     };
 
-    let wasm_abi = if attrs.only_mobile {
-        quote! {}
-    } else {
-        quote! { #[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))] }
-    };
-
     let expanded = quote! {
         #mobile_derive
         #mobile_rename
         #wasm_derive
-        #wasm_abi
         #web_rename
         #input
     };
@@ -249,7 +248,6 @@ pub fn ffi_id_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         #[cfg_attr(feature = "wasm", derive(serde::Serialize, serde::Deserialize, tsify::Tsify))]
-        #[cfg_attr(feature = "wasm", tsify(into_wasm_abi, from_wasm_abi))]
         #input
 
         #[cfg(feature = "uniffi")]

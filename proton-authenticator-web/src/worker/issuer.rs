@@ -1,10 +1,9 @@
 use proton_authenticator::{IssuerInfo, TOTPIssuerMapper};
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmIssuerInfo {
     pub domain: String,
     pub icon_url: String,
@@ -40,7 +39,11 @@ impl WasmIssuerMapper {
     }
 
     #[wasm_bindgen]
-    pub fn get_issuer_info(&self, issuer: String) -> Option<WasmIssuerInfo> {
-        self.inner.lookup(&issuer).map(WasmIssuerInfo::from)
+    pub fn get_issuer_info(&self, issuer: String) -> Result<Option<Ts<WasmIssuerInfo>>, JsError> {
+        self.inner
+            .lookup(&issuer)
+            .map(WasmIssuerInfo::from)
+            .map(|info| Ok(info.into_ts()?))
+            .transpose()
     }
 }

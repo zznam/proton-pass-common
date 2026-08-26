@@ -2,6 +2,7 @@ mod image_types;
 
 use image_types::WasmConvertImageError;
 use proton_pass_common::image::{ConvertImageError as CommonConvertImageError, image_bytes_to_256_webp};
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 impl From<CommonConvertImageError> for WasmConvertImageError {
@@ -14,6 +15,10 @@ impl From<CommonConvertImageError> for WasmConvertImageError {
 }
 
 #[wasm_bindgen]
-pub fn convert_image_to_256_webp(input: &[u8]) -> Result<Vec<u8>, WasmConvertImageError> {
-    image_bytes_to_256_webp(input).map_err(|e| e.into())
+pub fn convert_image_to_256_webp(input: &[u8]) -> Result<Vec<u8>, Ts<WasmConvertImageError>> {
+    image_bytes_to_256_webp(input).map_err(|e| {
+        WasmConvertImageError::from(e)
+            .into_ts()
+            .expect("failed to serialize WasmConvertImageError")
+    })
 }

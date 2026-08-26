@@ -1,12 +1,11 @@
 use crate::entry::WasmAuthenticatorEntryModel;
 use proton_authenticator::ordering::{EntryWithOrder, reorder_items};
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify::{Ts, Tsify};
 use wasm_bindgen::JsError;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct AuthenticatorEntryWithOrder {
     pub entry: WasmAuthenticatorEntryModel,
     pub modify_time: i64,
@@ -38,23 +37,23 @@ impl From<EntryWithOrder> for AuthenticatorEntryWithOrder {
 
 #[wasm_bindgen]
 pub fn sort_entries(
-    local: Vec<AuthenticatorEntryWithOrder>,
-    remote: Vec<AuthenticatorEntryWithOrder>,
-) -> Result<Vec<AuthenticatorEntryWithOrder>, JsError> {
+    local: Vec<Ts<AuthenticatorEntryWithOrder>>,
+    remote: Vec<Ts<AuthenticatorEntryWithOrder>>,
+) -> Result<Vec<Ts<AuthenticatorEntryWithOrder>>, JsError> {
     let mut local_mapped = vec![];
     for entry in local {
-        local_mapped.push(EntryWithOrder::try_from(entry)?);
+        local_mapped.push(EntryWithOrder::try_from(entry.to_rust()?)?);
     }
     let mut remote_mapped = vec![];
     for entry in remote {
-        remote_mapped.push(EntryWithOrder::try_from(entry)?);
+        remote_mapped.push(EntryWithOrder::try_from(entry.to_rust()?)?);
     }
 
     let res = reorder_items(&local_mapped, &remote_mapped);
 
     let mut res_mapped = Vec::new();
     for entry in res {
-        res_mapped.push(AuthenticatorEntryWithOrder::from(entry));
+        res_mapped.push(AuthenticatorEntryWithOrder::from(entry).into_ts()?);
     }
 
     Ok(res_mapped)

@@ -15,7 +15,6 @@ use tsify::Tsify;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "kebab-case")]
 pub enum WasmAuthenticatorAttachment {
     Platform,
@@ -32,7 +31,6 @@ impl From<AuthenticatorAttachment> for WasmAuthenticatorAttachment {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "kebab-case")]
 pub enum WasmPublicKeyCredentialType {
     PublicKey,
@@ -49,7 +47,6 @@ impl From<PublicKeyCredentialType> for WasmPublicKeyCredentialType {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorExtensionsClientOutputs {
     #[serde(default, rename = "credProps")]
     pub cred_props: Option<WasmCredentialPropertiesOutput>,
@@ -68,7 +65,6 @@ impl From<AuthenticationExtensionsClientOutputs> for WasmAuthenticatorExtensions
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticationExtensionsPrfOutputs {
     #[serde(default)]
     pub enabled: Option<bool>,
@@ -86,7 +82,6 @@ impl From<AuthenticationExtensionsPrfOutputs> for WasmAuthenticationExtensionsPr
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticationExtensionsPrfValues {
     pub first: Vec<u8>,
 
@@ -105,7 +100,6 @@ impl From<AuthenticationExtensionsPrfValues> for WasmAuthenticationExtensionsPrf
 
 // Keep the serde macros in sync `webauthn/extensions.rs`
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmCredentialPropertiesOutput {
     #[serde(rename = "rk", default, skip_serializing_if = "Option::is_none")]
@@ -121,7 +115,6 @@ impl From<CredentialPropertiesOutput> for WasmCredentialPropertiesOutput {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorAttestationResponse {
     pub client_data_json: Vec<u8>,
     pub authenticator_data: Vec<u8>,
@@ -147,7 +140,6 @@ impl From<AuthenticatorAttestationResponse> for WasmAuthenticatorAttestationResp
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmAuthenticatorAssertionResponse {
     pub client_data_json: Vec<u8>,
     pub authenticator_data: Vec<u8>,
@@ -169,7 +161,6 @@ impl From<AuthenticatorAssertionResponse> for WasmAuthenticatorAssertionResponse
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmPublicKeyCredentialAttestation {
     pub id: String,
     pub raw_id: Vec<u8>,
@@ -193,7 +184,6 @@ impl From<CreatedPublicKeyCredential> for WasmPublicKeyCredentialAttestation {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmPublicKeyCredentialAssertion {
     pub id: String,
     pub raw_id: Vec<u8>,
@@ -217,7 +207,6 @@ impl From<AuthenticatedPublicKeyCredential> for WasmPublicKeyCredentialAssertion
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "kebab-case")]
 pub enum WasmAuthenticatorTransport {
     Usb,
@@ -240,7 +229,6 @@ impl From<AuthenticatorTransport> for WasmAuthenticatorTransport {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmGeneratePasskeyResponse {
     pub credential: WasmPublicKeyCredentialAttestation,
     pub passkey: Vec<u8>,
@@ -258,13 +246,11 @@ pub struct WasmGeneratePasskeyResponse {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmResolvePasskeyChallengeResponse {
     pub credential: WasmPublicKeyCredentialAssertion,
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmCreatePasskeyData {
     pub rp_id: Option<String>,
     pub rp_name: String,

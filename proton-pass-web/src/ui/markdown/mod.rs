@@ -10,13 +10,14 @@ use proton_pass_common::markdown::{
     MarkdownUnsafeLinkReason as CommonMarkdownUnsafeLinkReason, Operation as CommonOperation,
     SpanStyle as CommonSpanStyle, StyledSpan as CommonStyledSpan, parse_markdown_document,
 };
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 mod markdown_types;
 
 #[wasm_bindgen(js_name = parseMarkdownDocument)]
-pub fn parse_markdown_document_wasm(text: String) -> Result<WasmMarkdownDocument, JsError> {
-    Ok(WasmMarkdownDocument::from(parse_markdown_document(&text)?))
+pub fn parse_markdown_document_wasm(text: String) -> Result<Ts<WasmMarkdownDocument>, JsError> {
+    Ok(WasmMarkdownDocument::from(parse_markdown_document(&text)?).into_ts()?)
 }
 
 /// A markdown editor with undo/redo support
@@ -61,15 +62,17 @@ impl MarkdownEditor {
 
     /// Get the current selection, if any (UTF-16 code unit offsets)
     #[wasm_bindgen(js_name = getSelection)]
-    pub fn get_selection(&self) -> Option<WasmMarkdownSelection> {
+    pub fn get_selection(&self) -> Result<Option<Ts<WasmMarkdownSelection>>, JsError> {
         self.editor
             .get_selection()
-            .map(|(start, end)| WasmMarkdownSelection { start, end })
+            .map(|(start, end)| Ok(WasmMarkdownSelection { start, end }.into_ts()?))
+            .transpose()
     }
 
     /// Apply a markdown operation
     #[wasm_bindgen(js_name = applyOperation)]
-    pub fn apply_operation(&mut self, operation: WasmMarkdownOperation) -> Result<(), JsError> {
+    pub fn apply_operation(&mut self, operation: Ts<WasmMarkdownOperation>) -> Result<(), JsError> {
+        let operation = operation.to_rust()?;
         let common_op: CommonOperation = operation.into();
         Ok(self.editor.apply_operation(common_op)?)
     }
@@ -141,11 +144,11 @@ impl MarkdownEditor {
 
     /// Render the current markdown text to editor styled spans
     #[wasm_bindgen(js_name = renderEditorSpans)]
-    pub fn render_editor_spans(&self) -> Vec<WasmMarkdownStyledSpan> {
+    pub fn render_editor_spans(&self) -> Result<Vec<Ts<WasmMarkdownStyledSpan>>, JsError> {
         self.editor
             .render_editor_spans()
             .into_iter()
-            .map(WasmMarkdownStyledSpan::from)
+            .map(|span| Ok(WasmMarkdownStyledSpan::from(span).into_ts()?))
             .collect()
     }
 }
@@ -325,11 +328,13 @@ mod tests {
 
     #[test]
     fn get_selection_is_present_on_wasm_editor() {
+        // `get_selection` wraps its result in `tsify::Ts`, which needs an actual JS runtime to
+        // (de)serialize, so exercise the underlying non-wasm editor directly instead.
         let mut editor = MarkdownEditor::new("hello world".to_string());
         editor.set_selection(0, 5).unwrap();
-        assert_eq!(editor.get_selection(), Some(WasmMarkdownSelection { start: 0, end: 5 }));
+        assert_eq!(editor.editor.get_selection(), Some((0, 5)));
 
         editor.set_cursor(3).unwrap();
-        assert_eq!(editor.get_selection(), None);
+        assert_eq!(editor.editor.get_selection(), None);
     }
 }
