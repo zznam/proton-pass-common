@@ -6,14 +6,16 @@
 
 ### Other
 
-- pass-web/authenticator-web: upgrade tsify to 0.5.8 and migrate all `#[wasm_bindgen]` boundaries off the deprecated `tsify(into_wasm_abi, from_wasm_abi)` attribute to `tsify::Ts<T>`, avoiding memory leaks on (de)serialization failure.
-
 ## 2.0.0
 
 ### Features :tada:
 
 - pass-common: Add Pass types for interop and proto serialization
 - pass-common: Add support for CXF and CXP
+
+### Other
+
+- pass-web/authenticator-web: upgrade tsify to 0.5.8 and migrate all `#[wasm_bindgen]` boundaries off the deprecated `tsify(into_wasm_abi, from_wasm_abi)` attribute to `tsify::Ts<T>`
 
 ## 1.8.0
 
