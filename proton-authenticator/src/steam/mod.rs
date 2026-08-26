@@ -28,6 +28,8 @@ impl SteamTotp {
             return Err(SteamTotpError::BadSecret);
         }
 
+        let secret = secret.trim_end_matches('=');
+
         match base32::decode(base32::Alphabet::Rfc4648 { padding: false }, secret) {
             Some(secret) => Ok(SteamTotp {
                 secret,
@@ -189,6 +191,25 @@ mod tests {
     fn fails_if_bad_secret() {
         let res = SteamTotp::new("invalid base64");
         assert!(res.is_err());
+    }
+
+    #[test]
+    fn accepts_base64_secret_with_slash_and_padding() {
+        let secret = "////EjRWeJq83vARIjNEVWZ3iJk=";
+        let totp = SteamTotp::new(secret).expect("should be able to create");
+        let result = totp.generate(1700000000);
+        assert_eq!("64YGY", result);
+    }
+
+    #[test]
+    fn base64_secret_with_slash_matches_base32_equivalent() {
+        let base64_secret = "////EjRWeJq83vARIjNEVWZ3iJk=";
+        let base32_secret = "77776ERUKZ4JVPG66AISEM2EKVTHPCEZ";
+
+        let from_base64 = SteamTotp::new(base64_secret).expect("should be able to create");
+        let from_base32 = SteamTotp::new(base32_secret).expect("should be able to create");
+
+        assert_eq!(from_base64.generate(1700000000), from_base32.generate(1700000000));
     }
 
     #[test]
