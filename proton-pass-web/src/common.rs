@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
+#[allow(dead_code)]
 #[derive(Tsify, Deserialize, Serialize)]
 pub struct WasmBoolDict(pub HashMap<String, bool>);
 
