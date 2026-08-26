@@ -4,7 +4,6 @@ use tsify::Tsify;
 
 #[allow(clippy::upper_case_acronyms)]
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum WasmWifiSecurity {
     Unspecified,
     WPA,

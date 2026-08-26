@@ -5,12 +5,11 @@ use proton_authenticator::operations::{
     LocalEntry as CommonLocalEntry, RemoteEntry as CommonRemoteEntry,
 };
 use serde::{Deserialize, Serialize};
-use tsify::Tsify;
+use tsify::{Ts, Tsify};
 use wasm_bindgen::JsError;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum WasmLocalEntryState {
     Synced,
     PendingSync,
@@ -28,7 +27,6 @@ impl From<WasmLocalEntryState> for CommonEntryState {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmLocalEntry {
     pub entry: WasmAuthenticatorEntryModel,
     pub state: WasmLocalEntryState,
@@ -50,7 +48,6 @@ impl TryFrom<WasmLocalEntry> for CommonLocalEntry {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmRemoteEntry {
     pub remote_id: String,
     pub revision: u32,
@@ -72,7 +69,6 @@ impl TryFrom<WasmRemoteEntry> for CommonRemoteEntry {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum WasmOperationType {
     Upsert,
     DeleteLocal,
@@ -92,7 +88,6 @@ impl From<AuthenticatorOperation> for WasmOperationType {
 }
 
 #[derive(Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub struct WasmEntryOperation {
     pub remote_id: Option<String>,
     pub revision: Option<u32>,
@@ -113,23 +108,23 @@ impl From<CommonEntryOperation> for WasmEntryOperation {
 
 #[wasm_bindgen]
 pub fn calculate_operations(
-    remote: Vec<WasmRemoteEntry>,
-    local: Vec<WasmLocalEntry>,
-) -> JsResult<Vec<WasmEntryOperation>> {
+    remote: Vec<Ts<WasmRemoteEntry>>,
+    local: Vec<Ts<WasmLocalEntry>>,
+) -> JsResult<Vec<Ts<WasmEntryOperation>>> {
     let mut remote_mapped = Vec::with_capacity(remote.len());
     for remote_entry in remote {
-        remote_mapped.push(CommonRemoteEntry::try_from(remote_entry)?);
+        remote_mapped.push(CommonRemoteEntry::try_from(remote_entry.to_rust()?)?);
     }
 
     let mut local_mapped = Vec::with_capacity(local.len());
     for local_entry in local {
-        local_mapped.push(CommonLocalEntry::try_from(local_entry)?);
+        local_mapped.push(CommonLocalEntry::try_from(local_entry.to_rust()?)?);
     }
 
     let ops = proton_authenticator::operations::calculate_operations_to_perform(remote_mapped, local_mapped);
-    let mut result: Vec<WasmEntryOperation> = Vec::new();
+    let mut result: Vec<Ts<WasmEntryOperation>> = Vec::new();
     for op in ops {
-        result.push(WasmEntryOperation::from(op));
+        result.push(WasmEntryOperation::from(op).into_ts()?);
     }
 
     Ok(result)

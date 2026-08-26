@@ -6,6 +6,7 @@ use proton_authenticator::generator::{
 };
 use proton_authenticator::{AuthenticatorCodeResponse, LogLevel, emit_log_message};
 use std::sync::Arc;
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
@@ -70,12 +71,12 @@ impl WebTotpGenerator {
     #[wasm_bindgen]
     pub async fn start(
         &self,
-        entries: Vec<WasmAuthenticatorEntryModel>,
+        entries: Vec<Ts<WasmAuthenticatorEntryModel>>,
         callback: js_sys::Function,
     ) -> Result<WebTotpGenerationHandle, JsError> {
         let mut as_entries = vec![];
         for entry in entries {
-            as_entries.push(entry.to_entry()?);
+            as_entries.push(entry.to_rust()?.to_entry()?);
         }
         let cb = WasmCallback { callback };
         let handle = self.inner.start_async(as_entries, cb).await;
@@ -93,12 +94,21 @@ unsafe impl Sync for WasmCallback {}
 
 impl TotpGeneratorCallback for WasmCallback {
     fn on_codes(&self, codes: Vec<AuthenticatorCodeResponse>) {
-        let res = js_sys::Array::new_with_length(codes.len() as u32);
+        let res = js_sys::Array::new();
 
-        for (idx, code) in codes.into_iter().enumerate() {
+        for code in codes {
             let mapped = WasmAuthenticatorCodeResponse::from(code);
-            let as_js_value: JsValue = mapped.into();
-            res.set(idx as u32, as_js_value);
+            match mapped.into_ts() {
+                Ok(as_ts) => {
+                    res.push(&as_ts.js_value());
+                }
+                Err(e) => {
+                    emit_log_message(
+                        LogLevel::Error,
+                        format!("Failed to serialize WasmAuthenticatorCodeResponse: {e:?}"),
+                    );
+                }
+            }
         }
 
         let _ = self.callback.call1(&JsValue::NULL, &res);

@@ -13,6 +13,7 @@ use login::WasmLogin;
 #[cfg(feature = "experimental")]
 use proton_pass_common::wifi::generate_wifi_uri;
 
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 mod creditcard;
@@ -40,7 +41,8 @@ pub fn validate_alias_prefix(prefix: String) -> Result<(), JsError> {
 
 #[cfg(feature = "experimental")]
 #[wasm_bindgen]
-pub fn validate_login_obj(login: WasmLogin) -> Result<(), JsError> {
+pub fn validate_login_obj(login: Ts<WasmLogin>) -> Result<(), JsError> {
+    let login = login.to_rust()?;
     match proton_pass_common::login::validate_login(login.into()) {
         Ok(_) => Ok(()),
         Err(e) => Err(e.into()),
@@ -58,15 +60,16 @@ pub fn get_domain(input: String) -> Result<String, JsError> {
 }
 
 #[wasm_bindgen]
-pub fn detect_credit_card_type(card_number: String) -> WasmCreditCardType {
+pub fn detect_credit_card_type(card_number: String) -> Result<Ts<WasmCreditCardType>, JsError> {
     let detector = CreditCardDetector::default();
     let detected = detector.detect(&card_number);
-    detected.into()
+    let wasm_type: WasmCreditCardType = detected.into();
+    Ok(wasm_type.into_ts()?)
 }
 
 #[wasm_bindgen]
-pub fn file_group_from_mime_type(mime_type: String) -> WasmFileGroup {
-    WasmFileGroup::from(get_file_group_from_mime_type(&mime_type))
+pub fn file_group_from_mime_type(mime_type: String) -> Result<Ts<WasmFileGroup>, JsError> {
+    Ok(WasmFileGroup::from(get_file_group_from_mime_type(&mime_type)).into_ts()?)
 }
 
 #[wasm_bindgen]
@@ -92,8 +95,9 @@ pub fn sanitize_filename(name: String, windows: bool) -> String {
 pub fn generate_wifi_svg_qr_code(
     ssid: String,
     password: String,
-    security: WasmWifiSecurity,
+    security: Ts<WasmWifiSecurity>,
 ) -> Result<String, JsError> {
+    let security = security.to_rust()?;
     let uri = generate_wifi_uri(&ssid, &password, security.into()).map_err(JsError::from)?;
     generate_svg_qr_code(uri)
 }

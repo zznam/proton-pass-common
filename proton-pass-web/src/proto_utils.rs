@@ -1,57 +1,69 @@
 use proton_pass_types::{FolderData, ItemAttachmentContent, ItemData, VaultData};
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
-pub fn item_data_serialize(item: ItemData) -> Result<Vec<u8>, JsError> {
+pub fn item_data_serialize(item: Ts<ItemData>) -> Result<Vec<u8>, JsError> {
+    let item = item.to_rust()?;
     item.serialize().map_err(|e| JsError::new(&format!("{:?}", e)))
 }
 
 #[wasm_bindgen]
-pub fn item_data_deserialize(data: Vec<u8>) -> Result<ItemData, JsError> {
-    ItemData::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))
+pub fn item_data_deserialize(data: Vec<u8>) -> Result<Ts<ItemData>, JsError> {
+    let item = ItemData::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))?;
+    Ok(item.into_ts()?)
 }
 
 #[wasm_bindgen]
-pub fn item_data_perform_update(original: Vec<u8>, updated: ItemData) -> Result<Vec<u8>, JsError> {
+pub fn item_data_perform_update(original: Vec<u8>, updated: Ts<ItemData>) -> Result<Vec<u8>, JsError> {
+    let updated = updated.to_rust()?;
     ItemData::perform_update(&original, &updated).map_err(|e| JsError::new(&format!("{:?}", e)))
 }
 
 #[wasm_bindgen]
-pub fn vault_data_serialize(vault: VaultData) -> Result<Vec<u8>, JsError> {
+pub fn vault_data_serialize(vault: Ts<VaultData>) -> Result<Vec<u8>, JsError> {
+    let vault = vault.to_rust()?;
     vault.serialize().map_err(|e| JsError::new(&format!("{:?}", e)))
 }
 
 #[wasm_bindgen]
-pub fn vault_data_deserialize(data: Vec<u8>) -> Result<VaultData, JsError> {
-    VaultData::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))
+pub fn vault_data_deserialize(data: Vec<u8>) -> Result<Ts<VaultData>, JsError> {
+    let vault = VaultData::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))?;
+    Ok(vault.into_ts()?)
 }
 
 #[wasm_bindgen]
-pub fn vault_data_perform_update(original: Vec<u8>, updated: VaultData) -> Result<Vec<u8>, JsError> {
+pub fn vault_data_perform_update(original: Vec<u8>, updated: Ts<VaultData>) -> Result<Vec<u8>, JsError> {
+    let updated = updated.to_rust()?;
     VaultData::perform_update(&original, &updated).map_err(|e| JsError::new(&format!("{:?}", e)))
 }
 
 #[wasm_bindgen]
-pub fn folder_data_serialize(folder: FolderData) -> Result<Vec<u8>, JsError> {
+pub fn folder_data_serialize(folder: Ts<FolderData>) -> Result<Vec<u8>, JsError> {
+    let folder = folder.to_rust()?;
     folder.serialize().map_err(|e| JsError::new(&format!("{:?}", e)))
 }
 
 #[wasm_bindgen]
-pub fn folder_data_deserialize(data: Vec<u8>) -> Result<FolderData, JsError> {
-    FolderData::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))
+pub fn folder_data_deserialize(data: Vec<u8>) -> Result<Ts<FolderData>, JsError> {
+    let folder = FolderData::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))?;
+    Ok(folder.into_ts()?)
 }
 
 #[wasm_bindgen]
-pub fn folder_data_perform_update(original: Vec<u8>, updated: FolderData) -> Result<Vec<u8>, JsError> {
+pub fn folder_data_perform_update(original: Vec<u8>, updated: Ts<FolderData>) -> Result<Vec<u8>, JsError> {
+    let updated = updated.to_rust()?;
     FolderData::perform_update(&original, &updated).map_err(|e| JsError::new(&format!("{:?}", e)))
 }
 
 #[wasm_bindgen]
-pub fn item_attachment_content_serialize(content: ItemAttachmentContent) -> Result<Vec<u8>, JsError> {
+pub fn item_attachment_content_serialize(content: Ts<ItemAttachmentContent>) -> Result<Vec<u8>, JsError> {
+    let content = content.to_rust()?;
     content.serialize().map_err(|e| JsError::new(&format!("{:?}", e)))
 }
 
 #[wasm_bindgen]
-pub fn item_attachment_content_deserialize(data: Vec<u8>) -> Result<ItemAttachmentContent, JsError> {
-    ItemAttachmentContent::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))
+pub fn item_attachment_content_deserialize(data: Vec<u8>) -> Result<Ts<ItemAttachmentContent>, JsError> {
+    let content = ItemAttachmentContent::deserialize(&data).map_err(|e| JsError::new(&format!("{:?}", e)))?;
+    Ok(content.into_ts()?)
 }

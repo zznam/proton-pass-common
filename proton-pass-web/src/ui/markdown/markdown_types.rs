@@ -3,7 +3,6 @@ use tsify::Tsify;
 use wasm_bindgen::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub enum WasmMarkdownOperation {
     Bold,
@@ -26,7 +25,6 @@ pub enum WasmMarkdownOperation {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub enum WasmMarkdownSpanStyle {
     Bold,
@@ -48,7 +46,6 @@ pub enum WasmMarkdownSpanStyle {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmMarkdownStyledSpan {
     pub start: u32,
@@ -63,7 +60,6 @@ pub struct WasmMarkdownStyledSpan {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmMarkdownSelection {
     pub start: u32,
@@ -71,7 +67,6 @@ pub struct WasmMarkdownSelection {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmMarkdownDocument {
     pub nodes: Vec<WasmMarkdownNode>,
@@ -79,7 +74,6 @@ pub struct WasmMarkdownDocument {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmMarkdownNode {
     pub id: u32,
@@ -104,7 +98,6 @@ pub struct WasmMarkdownNode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub enum WasmMarkdownNodeKind {
     Paragraph,
@@ -124,7 +117,6 @@ pub enum WasmMarkdownNodeKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmMarkdownSafeLink {
     pub href: String,
@@ -132,7 +124,6 @@ pub struct WasmMarkdownSafeLink {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub struct WasmMarkdownUnsafeLink {
     pub raw: String,
@@ -140,7 +131,6 @@ pub struct WasmMarkdownUnsafeLink {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub enum WasmMarkdownLinkScheme {
     Http,
@@ -149,7 +139,6 @@ pub enum WasmMarkdownLinkScheme {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Tsify)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 #[serde(rename_all = "camelCase")]
 pub enum WasmMarkdownUnsafeLinkReason {
     Empty,

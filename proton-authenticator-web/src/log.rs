@@ -2,12 +2,11 @@ use js_sys::Function;
 use proton_authenticator::{LogLevel as CommonLogLevel, Logger, register_authenticator_logger as common_register};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tsify::Tsify;
+use tsify::{Ts, Tsify};
 use wasm_bindgen::prelude::*;
 
 /// The log levels we pass along to our JavaScript logger.
 #[derive(Debug, Clone, Tsify, Deserialize, Serialize)]
-#[tsify(into_wasm_abi, from_wasm_abi)]
 pub enum AuthenticatorLogLevel {
     Trace,
     Debug,
@@ -124,6 +123,8 @@ pub fn register_authenticator_logger(callback: Function) {
 }
 
 #[wasm_bindgen]
-pub fn emit_log(log_level: AuthenticatorLogLevel, message: String) {
+pub fn emit_log(log_level: Ts<AuthenticatorLogLevel>, message: String) -> Result<(), JsError> {
+    let log_level = log_level.to_rust()?;
     proton_authenticator::emit_log_message(log_level.into(), message);
+    Ok(())
 }

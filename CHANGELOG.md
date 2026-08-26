@@ -6,6 +6,8 @@
 
 ### Other
 
+- pass-web/authenticator-web: upgrade tsify to 0.5.8 and migrate all `#[wasm_bindgen]` boundaries off the deprecated `tsify(into_wasm_abi, from_wasm_abi)` attribute to `tsify::Ts<T>`, avoiding memory leaks on (de)serialization failure.
+
 ## 2.0.0
 
 ### Features :tada:
