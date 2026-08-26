@@ -6,6 +6,13 @@
 
 ### Other
 
+## 2.0.0
+
+### Features :tada:
+
+- pass-common: Add Pass types for interop and proto serialization
+- pass-common: Add support for CXF and CXP
+
 ## 1.8.0
 
 ### Features :tada:
