@@ -134,10 +134,10 @@ fn decrypt_2fas_encrypted_state(
     if iv.len() != 12 {
         return Err(TwoFasImportError::UnableToDecrypt);
     }
-    let nonce = Nonce::from_slice(iv);
+    let nonce = Nonce::try_from(iv.as_slice()).map_err(|_| TwoFasImportError::UnableToDecrypt)?;
 
     // The ciphertext in `data` should also include the 16-byte GCM authentication tag at the end.
-    let decrypted = cipher.decrypt(nonce, data.as_ref()).map_err(|e| {
+    let decrypted = cipher.decrypt(&nonce, data.as_ref()).map_err(|e| {
         warn!("Error decrypting 2FAS encrypted backup data: {}", e);
         TwoFasImportError::WrongPassword
     })?;

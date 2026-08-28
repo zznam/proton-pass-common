@@ -1,4 +1,4 @@
-use rand::Rng;
+use rand::{Rng, RngExt};
 
 #[cfg(feature = "wasm")]
 use proton_pass_derive::ffi_type;

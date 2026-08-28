@@ -2,6 +2,7 @@ use super::fetcher::WebauthnFetcher;
 use super::{PasskeyError, PasskeyResult, ProtonPassKey};
 use passkey::authenticator::{Authenticator, UserValidationMethod};
 use passkey::client::Client;
+use passkey::crypto::rust_crypto::RustCryptoBackend;
 use passkey_authenticator::extensions::HmacSecretConfig;
 use passkey_authenticator::{UiHint, UserCheck};
 use passkey_types::ctap2::Ctap2Error;
@@ -55,18 +56,21 @@ pub(crate) fn get_client(
     pk: Option<ProtonPassKey>,
     fetcher: WebauthnFetcher,
     allows_insecure_localhost: bool,
-) -> Client<Option<Passkey>, MyUserValidationMethod, public_suffix::PublicSuffixList, WebauthnFetcher> {
+) -> Client<Option<Passkey>, MyUserValidationMethod, RustCryptoBackend, public_suffix::PublicSuffixList, WebauthnFetcher>
+{
     let authenticator = get_authenticator(pk);
     Client::new_with_custom_tld_provider(authenticator, public_suffix::DEFAULT_PROVIDER, Some(fetcher))
         .allows_insecure_localhost(allows_insecure_localhost)
 }
 
-pub(crate) fn get_authenticator(pk: Option<ProtonPassKey>) -> Authenticator<Option<Passkey>, MyUserValidationMethod> {
+pub(crate) fn get_authenticator(
+    pk: Option<ProtonPassKey>,
+) -> Authenticator<Option<Passkey>, MyUserValidationMethod, RustCryptoBackend> {
     let my_aaguid = Aaguid::from(AAGUID);
     let user_validation_method = MyUserValidationMethod {};
 
     let store: Option<Passkey> = pk.map(Passkey::from);
-    Authenticator::new(my_aaguid, store, user_validation_method)
+    Authenticator::new(my_aaguid, store, user_validation_method, RustCryptoBackend)
         .hmac_secret(HmacSecretConfig::new_with_uv_only().enable_on_make_credential())
 }
 

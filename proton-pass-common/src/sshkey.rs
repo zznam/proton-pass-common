@@ -1,6 +1,5 @@
 use proton_pass_derive::{Error, ffi_type};
 use ssh_key::private::{Ed25519Keypair, RsaKeypair};
-use ssh_key::rand_core::OsRng;
 use ssh_key::{LineEnding, PrivateKey, PublicKey};
 
 #[derive(Debug, Error)]
@@ -81,14 +80,15 @@ pub fn generate_ssh_key(
     key_type: SshKeyType,
     passphrase: Option<String>,
 ) -> Result<SshKeyPair, SshKeyError> {
+    let mut rng = rand::rng();
     let mut private_key = match key_type {
         SshKeyType::RSA2048 | SshKeyType::RSA4096 => {
-            let keypair = RsaKeypair::random(&mut OsRng, key_type.bit_size())
+            let keypair = RsaKeypair::random(&mut rng, key_type.bit_size())
                 .map_err(|e| SshKeyError::GenerationFailed(e.to_string()))?;
             PrivateKey::from(keypair)
         }
         SshKeyType::Ed25519 => {
-            let keypair = Ed25519Keypair::random(&mut OsRng);
+            let keypair = Ed25519Keypair::random(&mut rng);
             PrivateKey::from(keypair)
         }
     };
@@ -104,7 +104,7 @@ pub fn generate_ssh_key(
 
     let private_key_str = if let Some(pass) = passphrase {
         let encrypted = private_key
-            .encrypt(&mut OsRng, pass)
+            .encrypt(&mut rng, pass)
             .map_err(|e| SshKeyError::GenerationFailed(e.to_string()))?;
 
         encrypted

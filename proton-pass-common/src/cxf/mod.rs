@@ -481,7 +481,7 @@ mod tests {
             0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x01,
         ];
         let secret = p256::SecretKey::from_slice(&scalar).unwrap();
-        let public_point = p256::elliptic_curve::sec1::ToEncodedPoint::to_encoded_point(&secret.public_key(), false);
+        let public_point = p256::elliptic_curve::sec1::ToSec1Point::to_sec1_point(&secret.public_key(), false);
 
         let proton_pass_key = ProtonPassKey {
             key: ProtonKey {

@@ -1,6 +1,6 @@
 use credential_exchange_format::B64Url;
 use proton_pass_types::{VaultData, VaultDisplayPreferences};
-use rand::Rng;
+use rand::RngExt;
 
 use super::CxfCollection;
 

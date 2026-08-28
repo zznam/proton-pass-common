@@ -4,7 +4,7 @@ use credential_exchange_format::{
 };
 use ed25519_dalek::SigningKey;
 use p256::SecretKey;
-use p256::elliptic_curve::sec1::ToEncodedPoint;
+use p256::elliptic_curve::sec1::ToSec1Point;
 use pkcs8::{DecodePrivateKey, EncodePrivateKey};
 use proton_pass_types::Passkey as PassPasskey;
 
@@ -100,7 +100,7 @@ pub(crate) fn credential_to_passkey(cred: &PasskeyCredential) -> Result<PassPass
 
     let (kty, alg, params) = if let Ok(secret) = SecretKey::from_pkcs8_der(&der) {
         let d = secret.to_bytes().to_vec();
-        let public_point = secret.public_key().to_encoded_point(false);
+        let public_point = secret.public_key().to_sec1_point(false);
         let x = public_point
             .x()
             .ok_or("EC2 public key is missing its x coordinate")?
@@ -191,7 +191,7 @@ mod tests {
             0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x01,
         ];
         let secret = SecretKey::from_slice(&scalar).unwrap();
-        let public_point = secret.public_key().to_encoded_point(false);
+        let public_point = secret.public_key().to_sec1_point(false);
         ProtonKey {
             kty: ProtonRegisteredLabelKeyType::Assigned(ProtonKeyType::EC2),
             key_id: Vec::new(),

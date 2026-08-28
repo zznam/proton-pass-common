@@ -150,7 +150,7 @@ impl SteamTotp {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::RngCore;
+    use rand::Rng;
 
     fn generate_code() -> Vec<u8> {
         let mut rng = rand::rngs::ThreadRng::default();

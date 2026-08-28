@@ -1,6 +1,6 @@
 use aes_gcm::aead::{Aead, Payload};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
-use rand::{RngCore, rngs::ThreadRng};
+use rand::{Rng, rngs::ThreadRng};
 
 #[derive(Clone, Debug)]
 pub enum EncryptionTag {
@@ -27,16 +27,16 @@ pub fn generate_encryption_key() -> Vec<u8> {
 
 pub fn encrypt(data: &[u8], key: &[u8], tag: EncryptionTag) -> Result<Vec<u8>, aes_gcm::Error> {
     // Initialize cipher from the 32-byte key.
-    let cipher = Aes256Gcm::new(key.into());
+    let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| aes_gcm::Error)?;
 
     // Generate a random 12-byte nonce.
     let nonce_bytes = random_bytes(12);
-    let nonce = Nonce::from_slice(&nonce_bytes);
+    let nonce = Nonce::try_from(nonce_bytes.as_slice()).map_err(|_| aes_gcm::Error)?;
 
     // Encrypt the data with the given AAD (or empty slice if None).
     let aad = tag.aad();
     let payload = Payload { msg: data, aad: &aad };
-    let ciphertext = cipher.encrypt(nonce, payload)?;
+    let ciphertext = cipher.encrypt(&nonce, payload)?;
 
     // Prepend nonce to the ciphertext.
     let mut result = nonce_bytes.to_vec();
@@ -52,14 +52,14 @@ pub fn decrypt(ciphertext: &[u8], key: &[u8], tag: EncryptionTag) -> Result<Vec<
 
     // Extract nonce and actual ciphertext.
     let (nonce_bytes, cipherdata) = ciphertext.split_at(12);
-    let cipher = Aes256Gcm::new(key.into());
-    let nonce = Nonce::from_slice(nonce_bytes);
+    let cipher = Aes256Gcm::new_from_slice(key).map_err(|_| aes_gcm::Error)?;
+    let nonce = Nonce::try_from(nonce_bytes).map_err(|_| aes_gcm::Error)?;
     let aad = tag.aad();
     let payload = Payload {
         msg: cipherdata,
         aad: &aad,
     };
-    cipher.decrypt(nonce, payload)
+    cipher.decrypt(&nonce, payload)
 }
 
 fn random_bytes(count: usize) -> Vec<u8> {

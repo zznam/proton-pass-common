@@ -1,8 +1,7 @@
 use super::AegisImportError;
 use crate::parser::aegis::db::AegisDbRoot;
-use aes_gcm::Aes256Gcm;
-use aes_gcm::aead::consts::U16;
-use aes_gcm::aead::{AeadInPlace, KeyInit, generic_array::GenericArray};
+use aes_gcm::aead::{AeadInOut, KeyInit};
+use aes_gcm::{Aes256Gcm, Nonce, Tag};
 use base64::Engine;
 use scrypt::{Params as ScryptParams, scrypt};
 
@@ -54,7 +53,7 @@ pub fn decrypt_aegis_encrypted_backup(input: &str, password: &str) -> Result<Aeg
     })?;
 
     // Build ScryptParams from the provided N, r, p
-    let params = ScryptParams::new(slot.n.trailing_zeros() as u8, slot.r, slot.p, 32).map_err(|e| {
+    let params = ScryptParams::new(slot.n.trailing_zeros() as u8, slot.r, slot.p).map_err(|e| {
         warn!("Error creating aegis encrypted backup params: {e:?}");
         AegisImportError::UnableToDecrypt
     })?;
@@ -82,25 +81,34 @@ pub fn decrypt_aegis_encrypted_backup(input: &str, password: &str) -> Result<Aeg
     })?;
 
     // Nonce must typically be 12 bytes for GCM:
-    let slot_nonce = GenericArray::from_slice(&slot_nonce_bytes);
+    let slot_nonce = Nonce::try_from(slot_nonce_bytes.as_slice()).map_err(|e| {
+        warn!("Error decoding aegis encrypted backup slot nonce: {e:?}");
+        AegisImportError::BadContent
+    })?;
 
     // Tag must be 16 bytes:
-    let slot_tag: GenericArray<u8, U16> = GenericArray::clone_from_slice(&slot_tag_bytes);
+    let slot_tag = Tag::try_from(slot_tag_bytes.as_slice()).map_err(|e| {
+        warn!("Error decoding aegis encrypted backup tag: {e:?}");
+        AegisImportError::BadContent
+    })?;
 
     // Create the AES-256-GCM instance from the derived key
-    let cipher = Aes256Gcm::new(GenericArray::from_slice(&derived_key));
+    let cipher = Aes256Gcm::new_from_slice(&derived_key).map_err(|e| {
+        warn!("Error creating aegis encrypted backup cipher: {e:?}");
+        AegisImportError::UnableToDecrypt
+    })?;
 
     // Copy encrypted bytes into a buffer we can decrypt in place
     let mut master_key_ciphertext = encrypted_master_key.clone();
 
     // Decrypt in place, providing the tag separately
     cipher
-        .decrypt_in_place_detached(
-            slot_nonce,
+        .decrypt_inout_detached(
+            &slot_nonce,
             // optional associated data:
             b"",
-            &mut master_key_ciphertext,
-            aes_gcm::Tag::from_slice(&slot_tag),
+            master_key_ciphertext.as_mut_slice().into(),
+            &slot_tag,
         )
         .map_err(|e| {
             warn!("Error decrypting aegis encrypted backup: {e:?}");
@@ -126,22 +134,31 @@ pub fn decrypt_aegis_encrypted_backup(input: &str, password: &str) -> Result<Aeg
     })?;
 
     // Convert to AES-GCM types
-    let db_nonce = GenericArray::from_slice(&db_nonce_bytes);
-    let db_tag: GenericArray<u8, U16> = GenericArray::clone_from_slice(&db_tag_bytes);
+    let db_nonce = Nonce::try_from(db_nonce_bytes.as_slice()).map_err(|e| {
+        warn!("Error decoding encrypted backup nonce: {e:?}");
+        AegisImportError::BadContent
+    })?;
+    let db_tag = Tag::try_from(db_tag_bytes.as_slice()).map_err(|e| {
+        warn!("Error decoding encrypted backup tag: {e:?}");
+        AegisImportError::BadContent
+    })?;
 
     // 5.3 Create a new AES-256-GCM instance, but this time with the decrypted “master key”:
     let master_key = &master_key_ciphertext; // from step 4
-    let db_cipher = Aes256Gcm::new(GenericArray::from_slice(master_key));
+    let db_cipher = Aes256Gcm::new_from_slice(master_key).map_err(|e| {
+        warn!("Error creating encrypted backup DB cipher: {e:?}");
+        AegisImportError::UnableToDecrypt
+    })?;
 
     // Copy the ciphertext to a mutable buffer for in-place decryption
     let mut db_ciphertext_mut = db_ciphertext.clone();
 
     db_cipher
-        .decrypt_in_place_detached(
-            db_nonce,
+        .decrypt_inout_detached(
+            &db_nonce,
             b"", // no additional authenticated data
-            &mut db_ciphertext_mut,
-            aes_gcm::Tag::from_slice(&db_tag),
+            db_ciphertext_mut.as_mut_slice().into(),
+            &db_tag,
         )
         .map_err(|e| {
             warn!("Error decrypting aegis encrypted backup: {e:?}");

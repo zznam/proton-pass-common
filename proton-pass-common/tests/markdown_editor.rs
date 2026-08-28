@@ -1,5 +1,5 @@
 use proton_pass_common::markdown::{MarkdownEditor, Operation, SpanStyle};
-use rand::Rng;
+use rand::RngExt;
 
 /// Convert a UTF-8 byte offset (e.g. from str::find) to the UTF-16 code unit offset
 /// that set_cursor / set_selection expect.

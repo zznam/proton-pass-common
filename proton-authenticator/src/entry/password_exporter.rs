@@ -2,10 +2,10 @@ use crate::crypto::EncryptionTag;
 use crate::entry::{export_entries, import_authenticator_entries};
 use crate::{AuthenticatorEntry, AuthenticatorError, ImportResult, ThirdPartyImportError, crypto};
 use argon2::Algorithm::Argon2id;
+use argon2::Argon2;
 use argon2::Version::V0x13;
-use argon2::password_hash::rand_core::RngCore;
-use argon2::{Argon2, password_hash::rand_core::OsRng};
 use base64::prelude::*;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 
@@ -23,7 +23,7 @@ pub fn export_entries_with_password(
     let exported_data = export_entries(entries)?;
 
     let mut salt = [0u8; 16];
-    OsRng.fill_bytes(&mut salt);
+    rand::rng().fill_bytes(&mut salt);
     let aes_key = derive_password_key(password, &salt).map_err(|e| {
         AuthenticatorError::SerializationError(format!(
             "Error exporting authenticator entries, could not derive password: {e:?}"

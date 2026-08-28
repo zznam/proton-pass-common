@@ -1,6 +1,6 @@
 use super::{PassphraseConfig, PasswordGeneratorError, RandomPasswordConfig, WordSeparator};
 use crate::string_modifiers;
-use rand::Rng;
+use rand::{Rng, RngExt};
 
 include!(concat!(env!("OUT_DIR"), "/wordlists.rs"));
 

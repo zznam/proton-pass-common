@@ -2,7 +2,7 @@ use crate::string_modifiers;
 use crate::username::WordType;
 
 use super::{UsernameGeneratorConfig, UsernameGeneratorError};
-use rand::Rng;
+use rand::{Rng, RngExt};
 
 // Import username-specific wordlists
 include!(concat!(env!("OUT_DIR"), "/username_wordlists.rs"));

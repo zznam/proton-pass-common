@@ -10,6 +10,7 @@ use passkey_types::webauthn::{
     CreatedPublicKeyCredential, CredentialCreationOptions, PublicKeyCredentialCreationOptions,
     PublicKeyCredentialParameters, PublicKeyCredentialRpEntity, PublicKeyCredentialType, PublicKeyCredentialUserEntity,
 };
+use sha2::{Digest, Sha256};
 use url::Url;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -83,8 +84,7 @@ async fn generate_passkey_response(
         let converted = ProtonPassKey::from(pk.clone());
         let key_id = my_webauthn_credential.id.clone();
         let serialized = serialize_passkey(&converted)?;
-        let client_data_hash =
-            passkey_types::crypto::sha256(my_webauthn_credential.response.client_data_json.as_slice()).to_vec();
+        let client_data_hash = Sha256::digest(my_webauthn_credential.response.client_data_json.as_slice()).to_vec();
         let attestation_object = my_webauthn_credential.response.attestation_object.to_vec();
         let prf = my_webauthn_credential
             .client_extension_results

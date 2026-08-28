@@ -252,7 +252,7 @@ mod tests {
     }
 
     fn random_id() -> String {
-        use rand::RngCore;
+        use rand::Rng;
 
         let mut res = String::new();
         let dict = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

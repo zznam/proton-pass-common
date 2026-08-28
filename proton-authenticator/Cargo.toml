@@ -19,23 +19,23 @@ proton-pass-totp = { path = "../proton-pass-totp" }
 serde.workspace = true
 serde_json.workspace = true
 
-aes-gcm = "0.10.3"
-argon2 = "0.5.3"
-chacha20 = "0.9"
+aes-gcm = "0.11"
+argon2 = "0.6"
+chacha20 = { version = "0.10", features = ["xchacha"] }
 base32 = "0.5.1"
-base64 = "0.22.0"
+base64 = "0.23.1"
 csv = "1.3.1"
 hex = "0.4.3"
 image = { version = "0.25.8", default-features = false, features = ["webp", "gif", "jpeg", "png", "bmp"], optional = true }
 hmac-sha1 = "0.2.2"
-hmac = "0.12"
-pbkdf2 = "0.12.2"
-poly1305 = "0.8"
+hmac = "0.13"
+pbkdf2 = "0.13"
+poly1305 = "0.9"
 protobuf = "3.7.1"
-rand = "0.8"
+rand = "0.10"
 rxing = { version = "0.9", features = ["default", "wasm_support"], optional = true }
-scrypt = "0.11.0"
-sha2 = "0.10"
+scrypt = "0.12"
+sha2 = "0.11"
 url = "2.5.4"
 zip = { version = "8", default-features = false, features = [ "deflate" ] }
 
@@ -52,8 +52,8 @@ uuid = { version = "1.15.1", features = ["v4"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures.workspace = true
 
-getrandom = { version = "0.2", features = ["js"] }
-gloo-timers = { version = "0.3.0", features = ["futures"] }
+getrandom = { package = "getrandom", version = "0.4", features = ["wasm_js"] }
+gloo-timers = { version = "0.4.0", features = ["futures"] }
 uuid = { version = "1.15.1", features = ["v4", "js"] }
 
 [build-dependencies]

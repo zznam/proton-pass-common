@@ -12,9 +12,9 @@
 // https://github.com/ente-io/ente/tree/8c2cb6dcad946e05786cb844acdd6e07370b4048/cli/internal/crypto
 
 use super::EnteImportError;
-use chacha20::cipher::{consts::U10, generic_array::GenericArray};
+use chacha20::cipher::{Array, consts::U16};
 use chacha20::{
-    ChaCha20,
+    ChaCha20, R20,
     cipher::{KeyIvInit, StreamCipher},
     hchacha,
 };
@@ -44,9 +44,12 @@ pub fn decrypt_custom_ente_xchacha20_poly1305(
     }
 
     // Derive the subkey using HChaCha20 (same as Go's crypto_core_hchacha20)
-    let chacha_key = chacha20::Key::from_slice(key);
-    let hchacha_header = GenericArray::from_slice(&header[..16]);
-    let subkey = hchacha::<U10>(chacha_key, hchacha_header);
+    let chacha_key = chacha20::Key::from(*key);
+    let hchacha_header: Array<u8, U16> = Array::try_from(&header[..16]).map_err(|e| {
+        warn!("Error converting header to hchacha input: {e:?}");
+        EnteImportError::BadContent
+    })?;
+    let subkey = hchacha::<R20>(&chacha_key, &hchacha_header);
 
     // Initialize nonce (same as Go's state initialization)
     let mut nonce = [0u8; 12];
