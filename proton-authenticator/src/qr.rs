@@ -42,10 +42,8 @@ pub fn parse_qr_code(input: &[u8]) -> Option<String> {
 
 fn convert_image_to_luma(data: &[u8]) -> Vec<u8> {
     let mut luma_data = Vec::with_capacity(data.len() / 4);
-    for src_pixel in data.chunks_exact(4) {
-        let [red, green, blue, alpha] = src_pixel else {
-            continue;
-        };
+    for src_pixel in data.as_chunks::<4>().0 {
+        let [red, green, blue, alpha] = src_pixel;
         let pixel = if *alpha == 0 {
             // white, so we know its luminance is 255
             0xFF
