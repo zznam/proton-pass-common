@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Proton Pass - Duplicate Item Detection</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="container">
+        <p class="back-link"><a href="../">&larr; Back to test websites</a></p>
+        <h1>Duplicate Item Detection</h1>
+        <p class="subtitle">
+            Build a list of items and run <code>proton-pass-common</code>'s duplicate detection against them.
+        </p>
+
+        <section class="panel" id="add-item-panel">
+            <h2 id="add-item-heading">Add item</h2>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="item-id">Item ID</label>
+                    <input type="text" id="item-id" placeholder="auto-generated if left empty" />
+                </div>
+                <div class="form-group">
+                    <label for="share-id">Share ID</label>
+                    <input type="text" id="share-id" value="share1" />
+                </div>
+                <div class="form-group">
+                    <label for="item-type">Item type</label>
+                    <select id="item-type">
+                        <option value="Login">Login</option>
+                        <option value="Note">Note</option>
+                        <option value="Alias">Alias</option>
+                        <option value="CreditCard">Credit card</option>
+                        <option value="Identity">Identity</option>
+                        <option value="SshKey">SSH key</option>
+                        <option value="Wifi">Wifi</option>
+                        <option value="Custom">Custom</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="item-title">Title</label>
+                    <input type="text" id="item-title" placeholder="e.g. Amazon" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="item-note">Note</label>
+                <textarea id="item-note" rows="2"></textarea>
+            </div>
+
+            <fieldset class="type-fields" data-type="Login">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="login-username">Username</label>
+                        <input type="text" id="login-username" />
+                    </div>
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="text" id="login-email" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="text" id="login-password" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="login-urls">URLs (one per line)</label>
+                    <textarea id="login-urls" rows="2" placeholder="https://amazon.com/login"></textarea>
+                </div>
+            </fieldset>
+
+            <fieldset class="type-fields" data-type="CreditCard" hidden>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cc-cardholder">Cardholder name</label>
+                        <input type="text" id="cc-cardholder" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cc-type">Card type</label>
+                        <select id="cc-type">
+                            <option value="Unspecified">Unspecified</option>
+                            <option value="Other">Other</option>
+                            <option value="Visa">Visa</option>
+                            <option value="Mastercard">Mastercard</option>
+                            <option value="AmericanExpress">American Express</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cc-number">Number</label>
+                        <input type="text" id="cc-number" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cc-verification">Verification number</label>
+                        <input type="text" id="cc-verification" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="cc-expiration">Expiration date</label>
+                        <input type="text" id="cc-expiration" placeholder="MM/YY" />
+                    </div>
+                    <div class="form-group">
+                        <label for="cc-pin">PIN</label>
+                        <input type="text" id="cc-pin" />
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="type-fields" data-type="Identity" hidden>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="identity-full-name">Full name</label>
+                        <input type="text" id="identity-full-name" />
+                    </div>
+                    <div class="form-group">
+                        <label for="identity-email">Email</label>
+                        <input type="text" id="identity-email" />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="identity-phone">Phone number</label>
+                        <input type="text" id="identity-phone" />
+                    </div>
+                    <div class="form-group">
+                        <label for="identity-organization">Organization</label>
+                        <input type="text" id="identity-organization" />
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="type-fields" data-type="SshKey" hidden>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ssh-public-key">Public key</label>
+                        <textarea id="ssh-public-key" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="ssh-private-key">Private key</label>
+                        <textarea id="ssh-private-key" rows="2"></textarea>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="type-fields" data-type="Wifi" hidden>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="wifi-ssid">SSID</label>
+                        <input type="text" id="wifi-ssid" />
+                    </div>
+                    <div class="form-group">
+                        <label for="wifi-password">Password</label>
+                        <input type="text" id="wifi-password" />
+                    </div>
+                    <div class="form-group">
+                        <label for="wifi-security">Security</label>
+                        <select id="wifi-security">
+                            <option value="UnspecifiedWifiSecurity">Unspecified</option>
+                            <option value="WPA">WPA</option>
+                            <option value="WPA2">WPA2</option>
+                            <option value="WPA3">WPA3</option>
+                            <option value="WEP">WEP</option>
+                        </select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="type-fields" data-type="Custom" hidden>
+                <div class="form-group">
+                    <label for="custom-section-name">Section name</label>
+                    <input type="text" id="custom-section-name" value="Section" />
+                </div>
+                <div class="form-group">
+                    <label>Section fields</label>
+                    <div id="custom-fields-list" class="dynamic-list"></div>
+                    <button type="button" id="add-custom-field-btn" class="secondary-btn">+ Add field</button>
+                </div>
+            </fieldset>
+
+            <div class="form-group">
+                <label>Extra fields</label>
+                <div id="extra-fields-list" class="dynamic-list"></div>
+                <button type="button" id="add-extra-field-btn" class="secondary-btn">+ Add extra field</button>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" id="cancel-edit-btn" class="secondary-btn" hidden>Cancel edit</button>
+                <button type="button" id="add-item-btn">Add item</button>
+            </div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-header">
+                <h2>Items (<span id="item-count">0</span>)</h2>
+                <div class="panel-actions">
+                    <button type="button" id="check-duplicates-btn">Check duplicates</button>
+                    <button type="button" id="export-json-btn" class="secondary-btn">Export JSON</button>
+                    <button type="button" id="import-json-btn" class="secondary-btn">Import JSON</button>
+                    <button type="button" id="clear-items-btn" class="danger-btn">Clear all</button>
+                    <input type="file" id="import-json-input" accept="application/json" hidden />
+                </div>
+            </div>
+            <table id="items-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Share</th>
+                        <th>Type</th>
+                        <th>Title</th>
+                        <th>Summary</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="items-table-body"></tbody>
+            </table>
+            <p id="items-empty-state" class="empty-state">No items yet. Add one above, or import a JSON file.</p>
+        </section>
+
+        <section class="panel" id="results-panel" hidden>
+            <h2>Duplicate groups</h2>
+            <div id="results-content"></div>
+        </section>
+
+        <div id="status-banner" class="status-banner" hidden></div>
+
+        <dialog id="view-item-dialog">
+            <h2>Item contents</h2>
+            <pre id="view-item-json"></pre>
+            <div class="form-actions">
+                <button type="button" id="close-view-item-btn" class="secondary-btn">Close</button>
+            </div>
+        </dialog>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>

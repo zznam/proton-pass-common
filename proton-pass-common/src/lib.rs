@@ -11,6 +11,8 @@ pub mod cxf;
 #[cfg(feature = "cxp")]
 pub mod cxp;
 pub mod domain;
+#[cfg(feature = "duplicate")]
+pub mod duplicate;
 pub mod email;
 pub mod file;
 pub mod host;

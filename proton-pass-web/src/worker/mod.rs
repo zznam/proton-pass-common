@@ -7,6 +7,7 @@ use passkey::WasmCreatePasskeyData;
 use passkey::{PasskeyManager, WasmGeneratePasskeyResponse, WasmResolvePasskeyChallengeResponse};
 
 mod cxf;
+mod duplicate;
 mod passkey;
 mod passkey_fetcher;
 mod share;

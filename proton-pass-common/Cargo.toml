@@ -7,7 +7,7 @@ version.workspace = true
 doctest = false
 
 [features]
-default = ["cxf"]
+default = []
 uniffi = ["dep:uniffi", "proton-pass-totp/uniffi"]
 wasm = ["dep:tsify", "dep:wasm-bindgen", "proton-pass-totp/wasm"]
 resize-image = ["dep:image", "dep:zenwebp"]
@@ -27,6 +27,7 @@ cxp = [
     "dep:parking_lot",
     "dep:zeroize",
 ]
+duplicate = ["dep:proton-pass-types"]
 
 [dependencies]
 uniffi = { workspace = true, optional = true }
@@ -80,9 +81,14 @@ zenwebp = { version = "0.4", optional = true }
 criterion.workspace = true
 tokio.workspace = true
 proptest = "1"
+proton-pass-types = { path = "../proton-pass-types" }
 
 [[bench]]
 name = "card_detector"
+harness = false
+
+[[bench]]
+name = "duplicate_detection"
 harness = false
 
 [[bench]]

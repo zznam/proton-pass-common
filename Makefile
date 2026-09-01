@@ -101,6 +101,7 @@ clean: ## Remove compile artifacts
 	@rm -rf proton-authenticator-web/test/pkg/
 	@rm -rf proton-authenticator-web/test-website/dist/
 	@rm -rf proton-pass-web/test/node_modules/
+	@rm -rf proton-pass-web/test-website/dist/
 	@rm -rf proton-authenticator-mobile/android/build
 	@rm -rf proton-authenticator-mobile/android/lib/src/main/jniLibs
 	@rm -rf proton-authenticator-mobile/android/lib/build
@@ -317,6 +318,23 @@ web-test: web-setup ## Test the web artifacts
 
 	@cp "${WEB_DIR}/package.json" "${WEB_TEST_BUILD_DIR}/package.json"
 	@cd ${WEB_TEST_DIR} && bun test
+
+.PHONY: pass-test-website-build
+pass-test-website-build: web-setup ## Build the pass web test website artifacts for browser
+	@rm -rf "${WEB_TEST_BUILD_DIR}" && mkdir -p "${WEB_TEST_BUILD_DIR}"
+	@echo "--- Building web-worker for browser"
+	@wasm-pack build proton-pass-web --scope protontech --target web --out-dir "${WEB_TEST_BUILD_DIR}/worker" --features "web_worker,experimental"
+	@sed -i'' -e 's/"name": "@protontech\/proton-pass-web",/"name": "worker",/g' "${WEB_TEST_BUILD_DIR}/worker/package.json"
+	@cp "${WEB_DIR}/package.json" "${WEB_TEST_BUILD_DIR}/package.json"
+
+.PHONY: pass-test-website
+pass-test-website: pass-test-website-build ## Build the pass web test website for deployment
+	@rm -rf "${WEB_DIR}/test-website/dist" && mkdir -p "${WEB_DIR}/test-website/dist/pkg"
+	@echo "--- Copying WASM artifacts to dist"
+	@cp -R "${WEB_TEST_BUILD_DIR}"/* "${WEB_DIR}/test-website/dist/pkg/"
+	@echo "--- Copying test website files to dist"
+	@cp "${WEB_DIR}/test-website"/*.html "${WEB_DIR}/test-website"/*.js "${WEB_DIR}/test-website"/*.css "${WEB_DIR}/test-website/dist/"
+	@echo "--- Test website ready for deployment in ${WEB_DIR}/test-website/dist"
 
 
 # Authenticator
