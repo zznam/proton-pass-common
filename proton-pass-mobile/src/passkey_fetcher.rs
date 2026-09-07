@@ -5,6 +5,7 @@ use proton_pass_common::passkey::{FetchError, WebauthnClientFetcher, WebauthnDom
 #[derive(Debug, uniffi::Record)]
 pub struct MobileWebauthnDomainsResponse {
     pub origins: Vec<String>,
+    pub final_url: Option<String>,
 }
 
 #[derive(Clone, Debug, proton_pass_derive::Error, uniffi::Error)]
@@ -32,7 +33,7 @@ impl WebauthnClientFetcher for MobileWebauthnFetcherAdapter {
             .await
             .map(|r| WebauthnDomainsResponse {
                 origins: r.origins,
-                final_url: None,
+                final_url: r.final_url,
             })
             .map_err(|e| match e {
                 MobileFetchError::NotFound(_) => FetchError::NotFound,

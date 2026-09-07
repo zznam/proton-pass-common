@@ -49,7 +49,8 @@ class PasskeyTest {
                 delay(100)
                 invoked = true
                 return MobileWebauthnDomainsResponse(
-                    origins = listOf("https://aliexpress.com", "https://m.aliexpress.com")
+                    origins = listOf("https://aliexpress.com", "https://m.aliexpress.com"),
+                    finalUrl = url
                 )
             }
         }
