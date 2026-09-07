@@ -6,6 +6,17 @@
 
 ### Other
 
+## 2.1.0
+
+### Features :tada:
+
+- pass-common: Add support for duplicate item detection and item merging
+- pass-mobile: Expose webauthn fetcher `final_url` field
+
+### Other
+
+- Dependency upgrades, including passkeys and rand
+
 ## 2.0.0
 
 ### Features :tada:
