@@ -696,6 +696,19 @@ impl ItemContent {
             ItemContent::Custom(v) => v.pretty_print(),
         }
     }
+
+    pub fn content_kind(&self) -> &'static str {
+        match self {
+            ItemContent::Note(_) => "Note",
+            ItemContent::Login(_) => "Login",
+            ItemContent::Alias(_) => "Alias",
+            ItemContent::CreditCard(_) => "CreditCard",
+            ItemContent::Identity(_) => "Identity",
+            ItemContent::SshKey(_) => "SshKey",
+            ItemContent::Wifi(_) => "Wifi",
+            ItemContent::Custom(_) => "Custom",
+        }
+    }
 }
 
 impl From<ItemContent> for item_v1::content::Content {
@@ -1592,6 +1605,19 @@ pub enum CardType {
     AmericanExpress,
 }
 
+impl std::fmt::Display for CardType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = match self {
+            CardType::Unspecified => "Unspecified",
+            CardType::Other => "Other",
+            CardType::Visa => "Visa",
+            CardType::Mastercard => "Mastercard",
+            CardType::AmericanExpress => "American Express",
+        };
+        f.write_str(label)
+    }
+}
+
 impl From<CardType> for item_v1::CardType {
     fn from(value: CardType) -> Self {
         match value {
@@ -1625,6 +1651,19 @@ pub enum WifiSecurity {
     WPA2,
     WPA3,
     WEP,
+}
+
+impl std::fmt::Display for WifiSecurity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = match self {
+            WifiSecurity::UnspecifiedWifiSecurity => "Unspecified",
+            WifiSecurity::WPA => "WPA",
+            WifiSecurity::WPA2 => "WPA2",
+            WifiSecurity::WPA3 => "WPA3",
+            WifiSecurity::WEP => "WEP",
+        };
+        f.write_str(label)
+    }
 }
 
 impl From<WifiSecurity> for item_v1::WifiSecurity {
