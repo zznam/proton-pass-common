@@ -133,9 +133,17 @@ fn item_to_export(item: &ItemData, warnings: &mut Vec<CxfWarning>) -> ItemExport
     ItemExport { credentials, scope }
 }
 
-fn item_data_to_cxf_item(item: &ItemData, metadata: &ItemMetadata, warnings: &mut Vec<CxfWarning>) -> CxfItem {
+fn item_data_to_cxf_item(item: &ItemData, metadata: &ItemMetadata, warnings: &mut Vec<CxfWarning>) -> Option<CxfItem> {
     let export = item_to_export(item, warnings);
-    CxfItem {
+    if export.credentials.is_empty() {
+        warnings.push(CxfWarning {
+            item_title: Some(item.title.clone()),
+            message: "Item has no credentials to export and will be skipped".to_string(),
+            kind: CxfWarningKind::UnsupportedItemType,
+        });
+        return None;
+    }
+    Some(CxfItem {
         id: generate_item_id(&item.item_uuid),
         creation_at: Some(metadata.created_at),
         modified_at: Some(metadata.modified_at),
@@ -146,7 +154,7 @@ fn item_data_to_cxf_item(item: &ItemData, metadata: &ItemMetadata, warnings: &mu
         credentials: export.credentials,
         tags: None,
         extensions: None,
-    }
+    })
 }
 
 pub fn export(input: CxfExportInput) -> Result<CxfExportResult, CxfError> {
@@ -160,7 +168,11 @@ pub fn export(input: CxfExportInput) -> Result<CxfExportResult, CxfError> {
             if matches!(item_with_metadata.item.content, ItemContent::Alias(_)) {
                 continue;
             }
-            let cxf_item = item_data_to_cxf_item(&item_with_metadata.item, &item_with_metadata.metadata, &mut warnings);
+            let Some(cxf_item) =
+                item_data_to_cxf_item(&item_with_metadata.item, &item_with_metadata.metadata, &mut warnings)
+            else {
+                continue;
+            };
             linked_items.push(LinkedItem {
                 item: cxf_item.id.clone(),
                 account: None,

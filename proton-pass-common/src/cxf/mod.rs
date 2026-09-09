@@ -106,7 +106,7 @@ mod tests {
     use super::*;
     use proton_pass_types::{
         AliasItem, AutofillUrl, AutofillUrlMode, CustomItem, CustomSection, IdentityItem, ItemContent, ItemExtraField,
-        ItemExtraFieldContent, LoginItem, Passkey as PassPasskey, SshKeyItem, VaultDisplayPreferences,
+        ItemExtraFieldContent, LoginItem, NoteItem, Passkey as PassPasskey, SshKeyItem, VaultDisplayPreferences,
     };
 
     fn export_input(vaults: Vec<CxfVaultWithItems>) -> CxfExportInput {
@@ -401,6 +401,82 @@ mod tests {
         }]);
         let export_result = export_cxf(input).unwrap();
         assert!(export_result.warnings.is_empty());
+
+        let import_result = import_cxf(&export_result.payload).unwrap();
+        assert_eq!(import_result.vaults[0].items.len(), 1);
+        assert_eq!(import_result.vaults[0].items[0].title, login_title);
+    }
+
+    #[test]
+    fn empty_note_item_is_skipped_with_warning() {
+        let login_title = "My login";
+        let empty_note = ItemData::new(
+            "Empty note".to_string(),
+            String::new(),
+            String::new(),
+            ItemContent::Note(NoteItem),
+            Vec::new(),
+        )
+        .unwrap();
+        let login = login_item(
+            login_title,
+            LoginItem {
+                email: "a@b.com".to_string(),
+                username: String::new(),
+                password: String::new(),
+                urls: Vec::new(),
+                totp_uri: String::new(),
+                passkeys: Vec::new(),
+                autofill_urls: Vec::new(),
+            },
+        );
+
+        let input = export_input(vec![CxfVaultWithItems {
+            vault: vault_data("Vault"),
+            items: vec![with_metadata(empty_note), with_metadata(login)],
+        }]);
+        let export_result = export_cxf(input).unwrap();
+        assert_eq!(export_result.warnings.len(), 1);
+        assert_eq!(export_result.warnings[0].kind, CxfWarningKind::UnsupportedItemType);
+        assert_eq!(export_result.warnings[0].item_title.as_deref(), Some("Empty note"));
+
+        let import_result = import_cxf(&export_result.payload).unwrap();
+        assert_eq!(import_result.vaults[0].items.len(), 1);
+        assert_eq!(import_result.vaults[0].items[0].title, login_title);
+    }
+
+    #[test]
+    fn custom_item_with_no_fields_is_skipped_with_warning() {
+        let login_title = "My login";
+        let empty_custom = ItemData::new(
+            "Empty custom".to_string(),
+            String::new(),
+            String::new(),
+            ItemContent::Custom(CustomItem { sections: Vec::new() }),
+            Vec::new(),
+        )
+        .unwrap();
+        let login = login_item(
+            login_title,
+            LoginItem {
+                email: "a@b.com".to_string(),
+                username: String::new(),
+                password: String::new(),
+                urls: Vec::new(),
+                totp_uri: String::new(),
+                passkeys: Vec::new(),
+                autofill_urls: Vec::new(),
+            },
+        );
+
+        let input = export_input(vec![CxfVaultWithItems {
+            vault: vault_data("Vault"),
+            items: vec![with_metadata(empty_custom), with_metadata(login)],
+        }]);
+        let export_result = export_cxf(input).unwrap();
+        assert_eq!(export_result.warnings.len(), 1);
+        assert_eq!(export_result.warnings[0].kind, CxfWarningKind::UnsupportedItemType);
+        assert_eq!(export_result.warnings[0].item_title.as_deref(), Some("Empty custom"));
 
         let import_result = import_cxf(&export_result.payload).unwrap();
         assert_eq!(import_result.vaults[0].items.len(), 1);
