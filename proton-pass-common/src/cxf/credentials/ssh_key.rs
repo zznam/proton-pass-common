@@ -7,21 +7,31 @@ use crate::cxf::{CxfCredential, CxfWarning, CxfWarningKind, ProtonExtension};
 
 pub(crate) const PUBLIC_KEY_FIELD_LABEL: &str = "public_key";
 
-fn detect_key_type(private_key: &str) -> String {
-    ssh_key::PrivateKey::from_openssh(private_key)
-        .map(|key| key.algorithm().to_string())
-        .unwrap_or_else(|_| "unknown".to_string())
-}
+pub(crate) fn ssh_key_to_credential(
+    item: &SshKeyItem,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
+) -> Option<CxfCredential> {
+    let key_type = match ssh_key::PrivateKey::from_openssh(&item.private_key) {
+        Ok(key) => key.algorithm().to_string(),
+        Err(_) => {
+            warnings.push(CxfWarning {
+                item_title: item_title.map(str::to_string),
+                message: "Could not export SSH key: unrecognized or unsupported key algorithm".to_string(),
+                kind: CxfWarningKind::UnsupportedCredential,
+            });
+            return None;
+        }
+    };
 
-pub(crate) fn ssh_key_to_credential(item: &SshKeyItem) -> CxfCredential {
-    Credential::SshKey(Box::new(SshKeyCredential {
-        key_type: detect_key_type(&item.private_key),
+    Some(Credential::SshKey(Box::new(SshKeyCredential {
+        key_type,
         private_key: B64Url::from(item.private_key.as_bytes()),
         key_comment: None,
         creation_date: None,
         expiry_date: None,
         key_generation_source: None,
-    }))
+    })))
 }
 
 pub(crate) fn public_key_to_credential(public_key: &str) -> Option<CxfCredential> {
@@ -55,39 +65,61 @@ pub(crate) fn credential_to_ssh_key(
     public_key: String,
     item_title: Option<&str>,
     warnings: &mut Vec<CxfWarning>,
-) -> SshKeyItem {
-    let private_key = String::from_utf8(Vec::from(cred.private_key.clone())).unwrap_or_else(|_| {
+) -> Option<SshKeyItem> {
+    let private_key = match String::from_utf8(Vec::from(cred.private_key.clone())) {
+        Ok(key) => key,
+        Err(_) => {
+            warnings.push(CxfWarning {
+                item_title: item_title.map(str::to_string),
+                message: "Could not import SSH private key: not valid UTF-8".to_string(),
+                kind: CxfWarningKind::MalformedInput,
+            });
+            return None;
+        }
+    };
+
+    if ssh_key::PrivateKey::from_openssh(&private_key).is_err() {
         warnings.push(CxfWarning {
             item_title: item_title.map(str::to_string),
-            message: "Could not import SSH private key: not valid UTF-8".to_string(),
-            kind: CxfWarningKind::MalformedInput,
+            message: "Could not verify the SSH key algorithm: imported as-is".to_string(),
+            kind: CxfWarningKind::UnsupportedCredential,
         });
-        String::new()
-    });
-    SshKeyItem {
+    }
+
+    Some(SshKeyItem {
         private_key,
         public_key,
         sections: Vec::new(),
-    }
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn generate_ed25519_openssh_key() -> String {
+        let keypair = ssh_key::private::Ed25519Keypair::random(&mut rand::rng());
+        ssh_key::PrivateKey::from(keypair)
+            .to_openssh(ssh_key::LineEnding::LF)
+            .unwrap()
+            .to_string()
+    }
+
     #[test]
     fn private_key_round_trips_as_opaque_bytes() {
+        let private_key = generate_ed25519_openssh_key();
         let item = SshKeyItem {
-            private_key: "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----".to_string(),
+            private_key,
             public_key: "ssh-ed25519 AAAA".to_string(),
             sections: Vec::new(),
         };
-        let cred = ssh_key_to_credential(&item);
+        let mut warnings = Vec::new();
+        let cred = ssh_key_to_credential(&item, None, &mut warnings).unwrap();
         let Credential::SshKey(cred) = cred else {
             panic!("expected ssh key credential")
         };
-        let mut warnings = Vec::new();
-        let back = credential_to_ssh_key(&cred, item.public_key.clone(), None, &mut warnings);
+        assert!(warnings.is_empty());
+        let back = credential_to_ssh_key(&cred, item.public_key.clone(), None, &mut warnings).unwrap();
         assert_eq!(back.private_key, item.private_key);
         assert!(warnings.is_empty());
     }
@@ -108,15 +140,55 @@ mod tests {
     }
 
     #[test]
-    fn unparseable_private_key_falls_back_to_unknown_type() {
-        let cred = ssh_key_to_credential(&SshKeyItem {
-            private_key: "not a real key".to_string(),
-            public_key: String::new(),
-            sections: Vec::new(),
-        });
-        let Credential::SshKey(cred) = cred else {
-            panic!("expected ssh key credential")
+    fn unparseable_private_key_is_not_exported_and_produces_warning() {
+        let mut warnings = Vec::new();
+        let cred = ssh_key_to_credential(
+            &SshKeyItem {
+                private_key: "not a real key".to_string(),
+                public_key: String::new(),
+                sections: Vec::new(),
+            },
+            Some("My SSH key"),
+            &mut warnings,
+        );
+        assert!(cred.is_none());
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].kind, CxfWarningKind::UnsupportedCredential);
+        assert_eq!(warnings[0].item_title.as_deref(), Some("My SSH key"));
+    }
+
+    #[test]
+    fn unparseable_private_key_is_kept_with_unsupported_credential_warning_on_import() {
+        let cred = SshKeyCredential {
+            key_type: "unknown".to_string(),
+            private_key: B64Url::from("not a real key".as_bytes()),
+            key_comment: None,
+            creation_date: None,
+            expiry_date: None,
+            key_generation_source: None,
         };
-        assert_eq!(cred.key_type, "unknown");
+        let mut warnings = Vec::new();
+        let back = credential_to_ssh_key(&cred, String::new(), Some("My SSH key"), &mut warnings).unwrap();
+        assert_eq!(back.private_key, "not a real key");
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].kind, CxfWarningKind::UnsupportedCredential);
+        assert_eq!(warnings[0].item_title.as_deref(), Some("My SSH key"));
+    }
+
+    #[test]
+    fn invalid_utf8_private_key_is_dropped_with_malformed_input_warning() {
+        let cred = SshKeyCredential {
+            key_type: "unknown".to_string(),
+            private_key: B64Url::from([0xFF, 0xFE].as_slice()),
+            key_comment: None,
+            creation_date: None,
+            expiry_date: None,
+            key_generation_source: None,
+        };
+        let mut warnings = Vec::new();
+        let back = credential_to_ssh_key(&cred, String::new(), Some("My SSH key"), &mut warnings);
+        assert!(back.is_none());
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].kind, CxfWarningKind::MalformedInput);
     }
 }

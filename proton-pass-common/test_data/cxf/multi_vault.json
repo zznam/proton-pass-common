@@ -9,19 +9,19 @@
       "username": "",
       "email": "",
       "collections": [
-        { "id": "coll-01", "title": "Vault One", "items": [{ "item": "item-01" }] },
-        { "id": "coll-02", "title": "Vault Two", "items": [{ "item": "item-02" }] }
+        { "id": "coll-01", "title": "Vault One", "items": [{ "item": "item-one" }] },
+        { "id": "coll-02", "title": "Vault Two", "items": [{ "item": "item-two" }] }
       ],
       "items": [
         {
-          "id": "item-01",
+          "id": "item-one",
           "title": "Item One",
           "credentials": [
             { "type": "note", "content": { "fieldType": "string", "value": "Note one" } }
           ]
         },
         {
-          "id": "item-02",
+          "id": "item-two",
           "title": "Item Two",
           "credentials": [
             { "type": "note", "content": { "fieldType": "string", "value": "Note two" } }

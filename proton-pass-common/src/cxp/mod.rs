@@ -1,7 +1,7 @@
 mod handshake;
 mod hpke;
 
-use crate::cxf::{CxfError, CxfExportInput, CxfImportResult, CxfWarning};
+use crate::cxf::{CxfError, CxfExportInput, CxfImportResult, CxfWarning, CxfWarningKind};
 use credential_exchange_protocol::{CredentialType, ExportResponse, Version};
 use parking_lot::Mutex;
 use proton_pass_derive::{Error, ffi_error};
@@ -155,6 +155,24 @@ fn credential_types_for_item(content: &ItemContent) -> Vec<CxpCredentialType> {
     }
 }
 
+fn exclude_items_with_no_representable_type(export: &mut CxfExportInput, warnings: &mut Vec<CxfWarning>) {
+    for vault in &mut export.vaults {
+        vault.items.retain(|item| {
+            if credential_types_for_item(&item.item.content).is_empty() {
+                warnings.push(CxfWarning {
+                    item_title: Some(item.item.title.clone()),
+                    message:
+                        "This item type cannot be represented by the CXP protocol and was excluded from the export"
+                            .to_string(),
+                    kind: CxfWarningKind::UnsupportedCredential,
+                });
+                return false;
+            }
+            true
+        });
+    }
+}
+
 fn filter_export_input_by_requested_types(export: &mut CxfExportInput, requested: &[CxpCredentialType]) {
     for vault in &mut export.vaults {
         vault.items.retain(|item| {
@@ -186,6 +204,8 @@ fn respond_to_cxp_export(request: &str, mut export: CxfExportInput) -> Result<Cx
     let parsed_request = handshake::parse_export_request(request)?;
     let recipient_key = handshake::negotiate_recipient_key(&parsed_request)?;
 
+    let mut warnings = Vec::new();
+    exclude_items_with_no_representable_type(&mut export, &mut warnings);
     if let Some(credential_types) = &parsed_request.credential_types {
         let requested: Vec<CxpCredentialType> = credential_types
             .iter()
@@ -196,6 +216,7 @@ fn respond_to_cxp_export(request: &str, mut export: CxfExportInput) -> Result<Cx
 
     let exporter_name = export.exporter_display_name.clone();
     let cxf_result = crate::cxf::export_cxf(export).map_err(|e| CxpError::SerializationError(format!("{e}")))?;
+    warnings.extend(cxf_result.warnings);
 
     let sealed = hpke::seal(
         &recipient_key,
@@ -214,10 +235,7 @@ fn respond_to_cxp_export(request: &str, mut export: CxfExportInput) -> Result<Cx
     let response = serde_json::to_vec(&response)
         .map_err(|e| CxpError::SerializationError(format!("failed to serialize CXP export response: {e}")))?;
 
-    Ok(CxpExportResponse {
-        response,
-        warnings: cxf_result.warnings,
-    })
+    Ok(CxpExportResponse { response, warnings })
 }
 
 fn complete_cxp_export(envelope: CxpExportEnvelope, encrypted_response: &[u8]) -> Result<CxfImportResult, CxpError> {
@@ -593,6 +611,187 @@ mod tests {
         let imported_items = &result.vaults[0].items;
         assert_eq!(imported_items.len(), 1);
         assert!(matches!(imported_items[0].content, ItemContent::CreditCard(_)));
+    }
+
+    #[test]
+    fn create_export_response_warns_and_excludes_items_with_no_representable_type() {
+        use proton_pass_types::{WifiItem, WifiSecurity};
+
+        let login = ItemData::new(
+            "My login".to_string(),
+            String::new(),
+            String::new(),
+            ItemContent::Login(LoginItem {
+                email: "alice@example.com".to_string(),
+                username: String::new(),
+                password: "hunter2".to_string(),
+                urls: Vec::new(),
+                totp_uri: String::new(),
+                passkeys: Vec::new(),
+                autofill_urls: Vec::new(),
+            }),
+            Vec::new(),
+        )
+        .unwrap();
+        let wifi = ItemData::new(
+            "My WiFi".to_string(),
+            String::new(),
+            String::new(),
+            ItemContent::Wifi(WifiItem {
+                ssid: "MyNetwork".to_string(),
+                password: "hunter2".to_string(),
+                security: WifiSecurity::WPA2,
+                sections: Vec::new(),
+            }),
+            Vec::new(),
+        )
+        .unwrap();
+        let vault = VaultData::new(
+            "Personal".to_string(),
+            String::new(),
+            VaultDisplayPreferences::default(),
+        )
+        .unwrap();
+
+        let export = CxfExportInput {
+            vaults: vec![CxfVaultWithItems {
+                vault,
+                items: vec![
+                    ItemWithMetadata {
+                        item: login,
+                        metadata: ItemMetadata {
+                            created_at: 0,
+                            modified_at: 0,
+                            pinned: false,
+                        },
+                    },
+                    ItemWithMetadata {
+                        item: wifi,
+                        metadata: ItemMetadata {
+                            created_at: 0,
+                            modified_at: 0,
+                            pinned: false,
+                        },
+                    },
+                ],
+            }],
+            exporter_rp_id: "other-app.example".to_string(),
+            exporter_display_name: "Other Password Manager".to_string(),
+            timestamp: 1_700_000_000,
+        };
+
+        let importer = CxpImportHandler::new();
+        let request = importer
+            .create_export_request(CxpExportRequest {
+                importer_name: "Proton Pass".to_string(),
+                supported_credential_types: vec![CxpCredentialType::BasicAuth],
+            })
+            .unwrap();
+
+        let exporter = CxpExportHandler::new();
+        let encrypted_response = exporter.create_export_response(&request, export).unwrap();
+        assert_eq!(encrypted_response.warnings.len(), 1);
+        assert_eq!(
+            encrypted_response.warnings[0].kind,
+            crate::cxf::CxfWarningKind::UnsupportedCredential
+        );
+        assert_eq!(encrypted_response.warnings[0].item_title.as_deref(), Some("My WiFi"));
+
+        let result = importer.process_export_response(&encrypted_response.response).unwrap();
+        let imported_items = &result.vaults[0].items;
+        assert_eq!(imported_items.len(), 1);
+        assert!(matches!(imported_items[0].content, ItemContent::Login(_)));
+    }
+
+    #[test]
+    fn create_export_response_warns_and_excludes_unrepresentable_items_even_without_a_type_restriction() {
+        use proton_pass_types::{WifiItem, WifiSecurity};
+
+        let login = ItemData::new(
+            "My login".to_string(),
+            String::new(),
+            String::new(),
+            ItemContent::Login(LoginItem {
+                email: "alice@example.com".to_string(),
+                username: String::new(),
+                password: "hunter2".to_string(),
+                urls: Vec::new(),
+                totp_uri: String::new(),
+                passkeys: Vec::new(),
+                autofill_urls: Vec::new(),
+            }),
+            Vec::new(),
+        )
+        .unwrap();
+        let wifi = ItemData::new(
+            "My WiFi".to_string(),
+            String::new(),
+            String::new(),
+            ItemContent::Wifi(WifiItem {
+                ssid: "MyNetwork".to_string(),
+                password: "hunter2".to_string(),
+                security: WifiSecurity::WPA2,
+                sections: Vec::new(),
+            }),
+            Vec::new(),
+        )
+        .unwrap();
+        let vault = VaultData::new(
+            "Personal".to_string(),
+            String::new(),
+            VaultDisplayPreferences::default(),
+        )
+        .unwrap();
+
+        let export = CxfExportInput {
+            vaults: vec![CxfVaultWithItems {
+                vault,
+                items: vec![
+                    ItemWithMetadata {
+                        item: login,
+                        metadata: ItemMetadata {
+                            created_at: 0,
+                            modified_at: 0,
+                            pinned: false,
+                        },
+                    },
+                    ItemWithMetadata {
+                        item: wifi,
+                        metadata: ItemMetadata {
+                            created_at: 0,
+                            modified_at: 0,
+                            pinned: false,
+                        },
+                    },
+                ],
+            }],
+            exporter_rp_id: "other-app.example".to_string(),
+            exporter_display_name: "Other Password Manager".to_string(),
+            timestamp: 1_700_000_000,
+        };
+
+        let importer = CxpImportHandler::new();
+        // No credential type restriction: `filter_export_input_by_requested_types` never runs.
+        let request = importer
+            .create_export_request(CxpExportRequest {
+                importer_name: "Proton Pass".to_string(),
+                supported_credential_types: vec![],
+            })
+            .unwrap();
+
+        let exporter = CxpExportHandler::new();
+        let encrypted_response = exporter.create_export_response(&request, export).unwrap();
+        assert_eq!(encrypted_response.warnings.len(), 1);
+        assert_eq!(
+            encrypted_response.warnings[0].kind,
+            crate::cxf::CxfWarningKind::UnsupportedCredential
+        );
+        assert_eq!(encrypted_response.warnings[0].item_title.as_deref(), Some("My WiFi"));
+
+        let result = importer.process_export_response(&encrypted_response.response).unwrap();
+        let imported_items = &result.vaults[0].items;
+        assert_eq!(imported_items.len(), 1);
+        assert!(matches!(imported_items[0].content, ItemContent::Login(_)));
     }
 
     #[test]

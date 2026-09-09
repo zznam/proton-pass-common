@@ -2,7 +2,7 @@ use credential_exchange_format::{Credential, CreditCardCredential, EditableField
 use proton_pass_types::{CardType, CreditCardItem};
 
 use crate::cxf::{
-    CxfCredential, ProtonExtension,
+    CxfCredential, CxfWarning, CxfWarningKind, ProtonExtension,
     fields::{concealed_field_to_string, opt_concealed_field, opt_field_to_string, opt_string_field, string_field},
 };
 
@@ -24,16 +24,37 @@ fn string_to_card_type(value: &str) -> CardType {
     }
 }
 
-fn parse_year_month(value: &str) -> Option<EditableFieldYearMonth> {
-    let (year, month) = value.split_once('-')?;
-    let year: u16 = year.parse().ok()?;
-    let month: u8 = month.parse().ok()?;
-    let month = chrono::Month::try_from(month).ok()?;
-    Some(EditableFieldYearMonth { year, month })
+fn parse_year_month(
+    value: &str,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
+) -> Option<EditableFieldYearMonth> {
+    if value.is_empty() {
+        return None;
+    }
+    let parsed = (|| {
+        let (year, month) = value.split_once('-')?;
+        let year: u16 = year.parse().ok()?;
+        let month: u8 = month.parse().ok()?;
+        let month = chrono::Month::try_from(month).ok()?;
+        Some(EditableFieldYearMonth { year, month })
+    })();
+    if parsed.is_none() {
+        warnings.push(CxfWarning {
+            item_title: item_title.map(str::to_string),
+            message: format!("Could not export card expiration date '{value}': expected format YYYY-MM"),
+            kind: CxfWarningKind::MalformedInput,
+        });
+    }
+    parsed
 }
 
-pub(crate) fn credit_card_to_credential(item: &CreditCardItem) -> CxfCredential {
-    let expiry_date = parse_year_month(&item.expiration_date).map(|ym| EditableField {
+pub(crate) fn credit_card_to_credential(
+    item: &CreditCardItem,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
+) -> CxfCredential {
+    let expiry_date = parse_year_month(&item.expiration_date, item_title, warnings).map(|ym| EditableField {
         id: None,
         value: ym.into(),
         label: None,
@@ -101,12 +122,14 @@ mod tests {
     #[test]
     fn credit_card_round_trips() {
         let item = sample();
-        let cred = credit_card_to_credential(&item);
+        let mut warnings = Vec::new();
+        let cred = credit_card_to_credential(&item, None, &mut warnings);
         let Credential::CreditCard(cred) = cred else {
             panic!("expected credit card credential")
         };
         let back = credential_to_credit_card(&cred);
         assert_eq!(back, item);
+        assert!(warnings.is_empty());
     }
 
     #[test]
@@ -119,12 +142,31 @@ mod tests {
             expiration_date: String::new(),
             pin: String::new(),
         };
-        let cred = credit_card_to_credential(&item);
+        let mut warnings = Vec::new();
+        let cred = credit_card_to_credential(&item, None, &mut warnings);
         let Credential::CreditCard(cred) = cred else {
             panic!("expected credit card credential")
         };
         let back = credential_to_credit_card(&cred);
         assert_eq!(back, item);
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn malformed_expiration_date_produces_warning() {
+        let item = CreditCardItem {
+            expiration_date: "not-a-date".to_string(),
+            ..sample()
+        };
+        let mut warnings = Vec::new();
+        let cred = credit_card_to_credential(&item, Some("My Card"), &mut warnings);
+        let Credential::CreditCard(cred) = cred else {
+            panic!("expected credit card credential")
+        };
+        assert!(cred.expiry_date.is_none());
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].kind, CxfWarningKind::MalformedInput);
+        assert_eq!(warnings[0].item_title.as_deref(), Some("My Card"));
     }
 
     #[test]

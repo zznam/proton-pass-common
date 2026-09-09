@@ -109,6 +109,8 @@ pub(crate) fn drivers_license_credential(
     item: &IdentityItem,
     carry_full_name: bool,
     carry_shared: bool,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
 ) -> Option<CxfCredential> {
     let extras = find_section(&item.extra_sections, DRIVERS_LICENSE_SECTION);
     if item.license_number.is_empty() && extras.is_none() && !carry_full_name && !carry_shared {
@@ -120,9 +122,11 @@ pub(crate) fn drivers_license_credential(
             .then(|| item.full_name.clone())
             .filter(|s| !s.is_empty())
             .and_then(|s| opt_string_field(&s)),
-        birth_date: carry_shared.then(|| opt_date_field(&item.birthdate)).flatten(),
-        issue_date: opt_date_field(&find_field_value(extras, "issue_date")),
-        expiry_date: opt_date_field(&find_field_value(extras, "expiry_date")),
+        birth_date: carry_shared
+            .then(|| opt_date_field(&item.birthdate, item_title, warnings))
+            .flatten(),
+        issue_date: opt_date_field(&find_field_value(extras, "issue_date"), item_title, warnings),
+        expiry_date: opt_date_field(&find_field_value(extras, "expiry_date"), item_title, warnings),
         issuing_authority: text_string_field(&find_field_value(extras, "issuing_authority")),
         territory: opt_territory_field(&find_field_value(extras, "territory")),
         country: opt_country_field(&find_field_value(extras, "country")),
@@ -135,6 +139,8 @@ pub(crate) fn passport_credential(
     item: &IdentityItem,
     carry_full_name: bool,
     carry_shared: bool,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
 ) -> Option<CxfCredential> {
     let extras = find_section(&item.extra_sections, PASSPORT_SECTION);
     if item.passport_number.is_empty() && extras.is_none() && !carry_full_name && !carry_shared {
@@ -151,11 +157,13 @@ pub(crate) fn passport_credential(
             .then(|| item.full_name.clone())
             .filter(|s| !s.is_empty())
             .and_then(|s| opt_string_field(&s)),
-        birth_date: carry_shared.then(|| opt_date_field(&item.birthdate)).flatten(),
+        birth_date: carry_shared
+            .then(|| opt_date_field(&item.birthdate, item_title, warnings))
+            .flatten(),
         birth_place: text_string_field(&find_field_value(extras, "birth_place")),
         sex: carry_shared.then(|| opt_string_field(&item.gender)).flatten(),
-        issue_date: opt_date_field(&find_field_value(extras, "issue_date")),
-        expiry_date: opt_date_field(&find_field_value(extras, "expiry_date")),
+        issue_date: opt_date_field(&find_field_value(extras, "issue_date"), item_title, warnings),
+        expiry_date: opt_date_field(&find_field_value(extras, "expiry_date"), item_title, warnings),
         issuing_authority: text_string_field(&find_field_value(extras, "issuing_authority")),
     })))
 }
@@ -165,6 +173,8 @@ pub(crate) fn identity_document_credential(
     carry_full_name: bool,
     carry_shared: bool,
     force: bool,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
 ) -> Option<CxfCredential> {
     let extras = find_section(&item.extra_sections, IDENTITY_DOCUMENT_SECTION);
     if item.social_security_number.is_empty()
@@ -186,11 +196,13 @@ pub(crate) fn identity_document_credential(
             .then(|| item.full_name.clone())
             .filter(|s| !s.is_empty())
             .and_then(|s| opt_string_field(&s)),
-        birth_date: carry_shared.then(|| opt_date_field(&item.birthdate)).flatten(),
+        birth_date: carry_shared
+            .then(|| opt_date_field(&item.birthdate, item_title, warnings))
+            .flatten(),
         birth_place: text_string_field(&find_field_value(extras, "birth_place")),
         sex: carry_shared.then(|| opt_string_field(&item.gender)).flatten(),
-        issue_date: opt_date_field(&find_field_value(extras, "issue_date")),
-        expiry_date: opt_date_field(&find_field_value(extras, "expiry_date")),
+        issue_date: opt_date_field(&find_field_value(extras, "issue_date"), item_title, warnings),
+        expiry_date: opt_date_field(&find_field_value(extras, "expiry_date"), item_title, warnings),
         issuing_authority: text_string_field(&find_field_value(extras, "issuing_authority")),
     })))
 }
@@ -249,7 +261,11 @@ pub(crate) fn unmapped_fields_credential(item: &IdentityItem) -> Option<CxfCrede
     })))
 }
 
-pub(crate) fn identity_to_credentials(item: &IdentityItem) -> Vec<CxfCredential> {
+pub(crate) fn identity_to_credentials(
+    item: &IdentityItem,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
+) -> Vec<CxfCredential> {
     let has_person_name = !item.first_name.is_empty() || !item.middle_name.is_empty() || !item.last_name.is_empty();
     let has_drivers_license =
         !item.license_number.is_empty() || find_section(&item.extra_sections, DRIVERS_LICENSE_SECTION).is_some();
@@ -274,6 +290,8 @@ pub(crate) fn identity_to_credentials(item: &IdentityItem) -> Vec<CxfCredential>
         item,
         full_name_carrier_is_dl,
         has_shared_fields && full_name_carrier_is_dl,
+        item_title,
+        warnings,
     ) {
         credentials.push(c);
     }
@@ -281,6 +299,8 @@ pub(crate) fn identity_to_credentials(item: &IdentityItem) -> Vec<CxfCredential>
         item,
         full_name_carrier_is_passport,
         has_shared_fields && full_name_carrier_is_passport,
+        item_title,
+        warnings,
     ) {
         credentials.push(c);
     }
@@ -289,6 +309,8 @@ pub(crate) fn identity_to_credentials(item: &IdentityItem) -> Vec<CxfCredential>
         full_name_carrier_is_document,
         has_shared_fields && full_name_carrier_is_document,
         needs_forced_document,
+        item_title,
+        warnings,
     ) {
         credentials.push(c);
     }
@@ -609,6 +631,7 @@ pub(crate) fn credentials_to_identity(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cxf::CxfWarningKind;
 
     fn empty_identity() -> IdentityItem {
         IdentityItem {
@@ -663,8 +686,8 @@ mod tests {
             last_name: last_name.to_string(),
             ..empty_identity()
         };
-        let creds = identity_to_credentials(&item);
         let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         let back = credentials_to_identity(&creds, None, &mut warnings);
         assert_eq!(back.first_name, first_name);
         assert_eq!(back.middle_name, middle_name);
@@ -689,8 +712,8 @@ mod tests {
             country_or_region: country_or_region.to_string(),
             ..empty_identity()
         };
-        let creds = identity_to_credentials(&item);
         let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         let back = credentials_to_identity(&creds, None, &mut warnings);
         assert_eq!(back.phone_number, phone_number);
         assert_eq!(back.street_address, street_address);
@@ -707,7 +730,8 @@ mod tests {
             full_name: full_name.to_string(),
             ..empty_identity()
         };
-        let creds = identity_to_credentials(&item);
+        let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         assert!(creds.iter().any(|c| matches!(c, Credential::IdentityDocument(_))));
         let mut warnings = Vec::new();
         let back = credentials_to_identity(&creds, None, &mut warnings);
@@ -723,11 +747,30 @@ mod tests {
             birthdate: birthdate.to_string(),
             ..empty_identity()
         };
-        let creds = identity_to_credentials(&item);
         let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         let back = credentials_to_identity(&creds, None, &mut warnings);
         assert_eq!(back.license_number, license_number);
         assert_eq!(back.birthdate, birthdate);
+    }
+
+    #[test]
+    fn malformed_birthdate_produces_warning_and_is_dropped() {
+        let license_number = "D1234";
+        let item = IdentityItem {
+            license_number: license_number.to_string(),
+            birthdate: "not-a-date".to_string(),
+            ..empty_identity()
+        };
+        let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, Some("My Identity"), &mut warnings);
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].kind, CxfWarningKind::MalformedInput);
+        assert_eq!(warnings[0].item_title.as_deref(), Some("My Identity"));
+
+        let mut import_warnings = Vec::new();
+        let back = credentials_to_identity(&creds, None, &mut import_warnings);
+        assert!(back.birthdate.is_empty());
     }
 
     #[test]
@@ -739,8 +782,8 @@ mod tests {
             gender: gender.to_string(),
             ..empty_identity()
         };
-        let creds = identity_to_credentials(&item);
         let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         let back = credentials_to_identity(&creds, None, &mut warnings);
         assert_eq!(back.passport_number, passport_number);
         assert_eq!(back.gender, gender);
@@ -753,8 +796,8 @@ mod tests {
             social_security_number: social_security_number.to_string(),
             ..empty_identity()
         };
-        let creds = identity_to_credentials(&item);
         let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         let back = credentials_to_identity(&creds, None, &mut warnings);
         assert_eq!(back.social_security_number, social_security_number);
     }
@@ -796,8 +839,8 @@ mod tests {
             email: email.to_string(),
             ..empty_identity()
         };
-        let creds = identity_to_credentials(&item);
         let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         let back = credentials_to_identity(&creds, None, &mut warnings);
         assert_eq!(back.organization, organization);
         assert_eq!(back.x_handle, x_handle);
@@ -854,8 +897,8 @@ mod tests {
             ..empty_identity()
         };
 
-        let creds = identity_to_credentials(&item);
         let mut warnings = Vec::new();
+        let creds = identity_to_credentials(&item, None, &mut warnings);
         let back = credentials_to_identity(&creds, Some("Identity"), &mut warnings);
 
         assert_eq!(back.first_name, item.first_name);

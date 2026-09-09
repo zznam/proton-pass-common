@@ -109,6 +109,14 @@ mod tests {
         ItemExtraFieldContent, LoginItem, NoteItem, Passkey as PassPasskey, SshKeyItem, VaultDisplayPreferences,
     };
 
+    fn generate_ssh_private_key() -> String {
+        let keypair = ssh_key::private::Ed25519Keypair::random(&mut rand::rng());
+        ssh_key::PrivateKey::from(keypair)
+            .to_openssh(ssh_key::LineEnding::LF)
+            .unwrap()
+            .to_string()
+    }
+
     fn export_input(vaults: Vec<CxfVaultWithItems>) -> CxfExportInput {
         CxfExportInput {
             vaults,
@@ -281,7 +289,8 @@ mod tests {
 
     #[test]
     fn ssh_key_with_section_round_trips() {
-        let private_key = "-----BEGIN OPENSSH PRIVATE KEY-----\nabc\n-----END OPENSSH PRIVATE KEY-----";
+        let private_key = generate_ssh_private_key();
+        let private_key = private_key.as_str();
         let public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5";
         let section_name = "Section A";
         let field_name = "field1";
@@ -372,6 +381,55 @@ mod tests {
     }
 
     #[test]
+    fn extra_note_credentials_are_kept_as_text_custom_fields() {
+        let first_note = "Primary note";
+        let second_note = "Second note";
+        let third_note = "Third note";
+        let payload = format!(
+            r#"{{
+                "version": {{ "major": 1, "minor": 0 }},
+                "exporterRpId": "example.com",
+                "exporterDisplayName": "Example Exporter",
+                "timestamp": 1700000000,
+                "accounts": [{{
+                    "id": "account-01",
+                    "username": "",
+                    "email": "",
+                    "collections": [],
+                    "items": [{{
+                        "id": "item-01",
+                        "title": "Multi note item",
+                        "credentials": [
+                            {{ "type": "note", "content": {{ "fieldType": "string", "value": "{first_note}" }} }},
+                            {{ "type": "note", "content": {{ "fieldType": "string", "value": "{second_note}" }} }},
+                            {{ "type": "note", "content": {{ "fieldType": "string", "value": "{third_note}" }} }}
+                        ]
+                    }}]
+                }}]
+            }}"#
+        );
+
+        let result = import_cxf(&payload).unwrap();
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+        let imported = &result.vaults[0].items[0];
+        assert_eq!(imported.note, first_note);
+
+        let second_field = imported
+            .extra_fields
+            .iter()
+            .find(|f| f.name == "Note")
+            .expect("second note preserved as a text custom field");
+        assert!(matches!(&second_field.content, ItemExtraFieldContent::Text(v) if v == second_note));
+
+        let third_field = imported
+            .extra_fields
+            .iter()
+            .find(|f| f.name == "Note 2")
+            .expect("third note preserved as a text custom field");
+        assert!(matches!(&third_field.content, ItemExtraFieldContent::Text(v) if v == third_note));
+    }
+
+    #[test]
     fn alias_item_is_silently_skipped_on_export() {
         let login_title = "My login";
         let alias = ItemData::new(
@@ -439,6 +497,56 @@ mod tests {
         assert_eq!(export_result.warnings.len(), 1);
         assert_eq!(export_result.warnings[0].kind, CxfWarningKind::UnsupportedItemType);
         assert_eq!(export_result.warnings[0].item_title.as_deref(), Some("Empty note"));
+
+        let import_result = import_cxf(&export_result.payload).unwrap();
+        assert_eq!(import_result.vaults[0].items.len(), 1);
+        assert_eq!(import_result.vaults[0].items[0].title, login_title);
+    }
+
+    #[test]
+    fn ssh_key_item_with_unparseable_private_key_is_skipped_with_warnings() {
+        let login_title = "My login";
+        let invalid_ssh_key = ItemData::new(
+            "Invalid SSH key".to_string(),
+            String::new(),
+            String::new(),
+            ItemContent::SshKey(SshKeyItem {
+                private_key: "not a real key".to_string(),
+                public_key: String::new(),
+                sections: Vec::new(),
+            }),
+            Vec::new(),
+        )
+        .unwrap();
+        let login = login_item(
+            login_title,
+            LoginItem {
+                email: "a@b.com".to_string(),
+                username: String::new(),
+                password: String::new(),
+                urls: Vec::new(),
+                totp_uri: String::new(),
+                passkeys: Vec::new(),
+                autofill_urls: Vec::new(),
+            },
+        );
+
+        let input = export_input(vec![CxfVaultWithItems {
+            vault: vault_data("Vault"),
+            items: vec![with_metadata(invalid_ssh_key), with_metadata(login)],
+        }]);
+        let export_result = export_cxf(input).unwrap();
+        assert_eq!(export_result.warnings.len(), 2);
+        assert!(
+            export_result
+                .warnings
+                .iter()
+                .any(|w| w.kind == CxfWarningKind::UnsupportedCredential
+                    && w.item_title.as_deref() == Some("Invalid SSH key"))
+        );
+        assert!(export_result.warnings.iter().any(
+            |w| w.kind == CxfWarningKind::UnsupportedItemType && w.item_title.as_deref() == Some("Invalid SSH key")
+        ));
 
         let import_result = import_cxf(&export_result.payload).unwrap();
         assert_eq!(import_result.vaults[0].items.len(), 1);
@@ -786,6 +894,8 @@ mod tests {
     fn ssh_key_foreign_unlabeled_custom_field_is_kept_as_extra_field() {
         let extra_field_name = "foo";
         let extra_field_value = "bar";
+        let private_key =
+            credential_exchange_format::B64Url::from(generate_ssh_private_key().into_bytes().as_slice()).to_string();
         let payload = format!(
             r#"{{
                 "version": {{ "major": 1, "minor": 0 }},
@@ -804,7 +914,7 @@ mod tests {
                             {{
                                 "type": "ssh-key",
                                 "keyType": "ssh-ed25519",
-                                "privateKey": "e30"
+                                "privateKey": "{private_key}"
                             }},
                             {{
                                 "type": "custom-fields",
@@ -880,6 +990,90 @@ mod tests {
         assert_eq!(titles.len(), 2);
         assert!(titles.contains(&"Alice login"));
         assert!(titles.contains(&"Bob login"));
+    }
+
+    #[test]
+    fn duplicate_item_ids_within_an_account_are_both_imported_with_warning() {
+        // These two ids decode to the same underlying B64Url bytes, simulating a
+        // malformed payload where two items in the same account share an id.
+        let payload = r#"{
+            "version": { "major": 1, "minor": 0 },
+            "exporterRpId": "example.com",
+            "exporterDisplayName": "Example Exporter",
+            "timestamp": 1700000000,
+            "accounts": [{
+                "id": "account-01",
+                "username": "",
+                "email": "",
+                "collections": [
+                    { "id": "coll-01", "title": "Vault", "items": [{ "item": "item-01" }] }
+                ],
+                "items": [
+                    {
+                        "id": "item-01",
+                        "title": "First",
+                        "credentials": [{ "type": "note", "content": { "fieldType": "string", "value": "a" } }]
+                    },
+                    {
+                        "id": "item-02",
+                        "title": "Second",
+                        "credentials": [{ "type": "note", "content": { "fieldType": "string", "value": "b" } }]
+                    }
+                ]
+            }]
+        }"#;
+
+        let result = import_cxf(payload).unwrap();
+        assert_eq!(result.warnings.len(), 1);
+        assert_eq!(result.warnings[0].kind, CxfWarningKind::MalformedInput);
+
+        let titles: Vec<&str> = result
+            .vaults
+            .iter()
+            .flat_map(|v| v.items.iter().map(|i| i.title.as_str()))
+            .collect();
+        assert_eq!(titles.len(), 2);
+        assert!(titles.contains(&"First"));
+        assert!(titles.contains(&"Second"));
+    }
+
+    #[test]
+    fn item_shared_across_multiple_collections_is_imported_into_each_vault() {
+        let payload = r#"{
+            "version": { "major": 1, "minor": 0 },
+            "exporterRpId": "example.com",
+            "exporterDisplayName": "Example Exporter",
+            "timestamp": 1700000000,
+            "accounts": [{
+                "id": "account-01",
+                "username": "",
+                "email": "",
+                "collections": [
+                    { "id": "coll-01", "title": "Vault One", "items": [{ "item": "item-shared" }] },
+                    { "id": "coll-02", "title": "Vault Two", "items": [{ "item": "item-shared" }] }
+                ],
+                "items": [
+                    {
+                        "id": "item-shared",
+                        "title": "Shared item",
+                        "credentials": [{ "type": "note", "content": { "fieldType": "string", "value": "a" } }]
+                    }
+                ]
+            }]
+        }"#;
+
+        let result = import_cxf(payload).unwrap();
+
+        // No warnings issued
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+
+        // 2 vaults imported
+        assert_eq!(result.vaults.len(), 2);
+        for vault in &result.vaults {
+            // Each vault contains the same item
+            assert_eq!(vault.items.len(), 1);
+            assert_eq!(vault.items[0].title, "Shared item");
+        }
     }
 
     #[test]

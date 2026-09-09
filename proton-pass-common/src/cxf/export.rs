@@ -87,9 +87,11 @@ fn item_to_export(item: &ItemData, warnings: &mut Vec<CxfWarning>) -> ItemExport
         }
         ItemContent::Note(_) => {}
         ItemContent::Alias(_) => {}
-        ItemContent::CreditCard(cc) => credentials.push(credit_card::credit_card_to_credential(cc)),
+        ItemContent::CreditCard(cc) => credentials.push(credit_card::credit_card_to_credential(cc, title, warnings)),
         ItemContent::SshKey(ssh) => {
-            credentials.push(ssh_key::ssh_key_to_credential(ssh));
+            if let Some(cred) = ssh_key::ssh_key_to_credential(ssh, title, warnings) {
+                credentials.push(cred);
+            }
             if let Some(cred) = ssh_key::public_key_to_credential(&ssh.public_key) {
                 credentials.push(cred);
             }
@@ -107,7 +109,7 @@ fn item_to_export(item: &ItemData, warnings: &mut Vec<CxfWarning>) -> ItemExport
             credentials.extend(custom::custom_item_to_credentials(custom_item));
         }
         ItemContent::Identity(identity_item) => {
-            credentials.extend(identity::identity_to_credentials(identity_item));
+            credentials.extend(identity::identity_to_credentials(identity_item, title, warnings));
         }
     }
 

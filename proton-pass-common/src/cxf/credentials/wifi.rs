@@ -2,7 +2,7 @@ use credential_exchange_format::{Credential, EditableField, EditableFieldWifiNet
 use proton_pass_types::{WifiItem, WifiSecurity};
 
 use crate::cxf::{
-    CxfCredential, ProtonExtension,
+    CxfCredential, CxfWarning, CxfWarningKind, ProtonExtension,
     fields::{opt_concealed_field, opt_concealed_field_to_string, opt_field_to_string, opt_string_field},
 };
 
@@ -26,6 +26,8 @@ fn security_to_field(
 
 fn field_to_security(
     field: Option<EditableField<EditableFieldWifiNetworkSecurityType, ProtonExtension>>,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
 ) -> WifiSecurity {
     let Some(field) = field else {
         return WifiSecurity::UnspecifiedWifiSecurity;
@@ -35,7 +37,26 @@ fn field_to_security(
         Ok(EditableFieldWifiNetworkSecurityType::Wpa2Personal) => WifiSecurity::WPA2,
         Ok(EditableFieldWifiNetworkSecurityType::Wpa3Personal) => WifiSecurity::WPA3,
         Ok(EditableFieldWifiNetworkSecurityType::Wep) => WifiSecurity::WEP,
-        _ => WifiSecurity::UnspecifiedWifiSecurity,
+        Ok(EditableFieldWifiNetworkSecurityType::Unsecured) => WifiSecurity::UnspecifiedWifiSecurity,
+        Ok(other) => {
+            warnings.push(CxfWarning {
+                item_title: item_title.map(str::to_string),
+                message: format!(
+                    "Unsupported WiFi security type '{}': imported as unspecified",
+                    String::from(other)
+                ),
+                kind: CxfWarningKind::UnsupportedCredential,
+            });
+            WifiSecurity::UnspecifiedWifiSecurity
+        }
+        Err(_) => {
+            warnings.push(CxfWarning {
+                item_title: item_title.map(str::to_string),
+                message: "Could not parse WiFi security type: imported as unspecified".to_string(),
+                kind: CxfWarningKind::MalformedInput,
+            });
+            WifiSecurity::UnspecifiedWifiSecurity
+        }
     }
 }
 
@@ -48,11 +69,15 @@ pub(crate) fn wifi_to_credential(item: &WifiItem) -> CxfCredential {
     }))
 }
 
-pub(crate) fn credential_to_wifi(cred: &WifiCredential<ProtonExtension>) -> WifiItem {
+pub(crate) fn credential_to_wifi(
+    cred: &WifiCredential<ProtonExtension>,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
+) -> WifiItem {
     WifiItem {
         ssid: opt_field_to_string(cred.ssid.clone()),
         password: opt_concealed_field_to_string(cred.passphrase.clone()),
-        security: field_to_security(cred.network_security_type.clone()),
+        security: field_to_security(cred.network_security_type.clone(), item_title, warnings),
         sections: Vec::new(),
     }
 }
@@ -77,7 +102,9 @@ mod tests {
         let Credential::Wifi(cred) = cred else {
             panic!("expected wifi credential")
         };
-        assert_eq!(credential_to_wifi(&cred), item);
+        let mut warnings = Vec::new();
+        assert_eq!(credential_to_wifi(&cred, None, &mut warnings), item);
+        assert!(warnings.is_empty());
     }
 
     #[test]
@@ -93,10 +120,12 @@ mod tests {
             panic!("expected wifi credential")
         };
         assert!(cred.network_security_type.is_none());
+        let mut warnings = Vec::new();
         assert_eq!(
-            credential_to_wifi(&cred).security,
+            credential_to_wifi(&cred, None, &mut warnings).security,
             WifiSecurity::UnspecifiedWifiSecurity
         );
+        assert!(warnings.is_empty());
     }
 
     #[test]
@@ -117,7 +146,30 @@ mod tests {
             let Credential::Wifi(cred) = cred else {
                 panic!("expected wifi credential")
             };
-            assert_eq!(credential_to_wifi(&cred).security, security);
+            let mut warnings = Vec::new();
+            assert_eq!(credential_to_wifi(&cred, None, &mut warnings).security, security);
+            assert!(warnings.is_empty());
         }
+    }
+
+    #[test]
+    fn unmapped_security_type_produces_warning() {
+        let cred = WifiCredential {
+            ssid: opt_string_field("N"),
+            network_security_type: Some(EditableField {
+                id: None,
+                value: EditableFieldWifiNetworkSecurityType::Other("wpa2-enterprise".to_string()).into(),
+                label: None,
+                extensions: None,
+            }),
+            passphrase: opt_concealed_field("p"),
+            hidden: None,
+        };
+        let mut warnings = Vec::new();
+        let item = credential_to_wifi(&cred, Some("Office WiFi"), &mut warnings);
+        assert_eq!(item.security, WifiSecurity::UnspecifiedWifiSecurity);
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].kind, CxfWarningKind::UnsupportedCredential);
+        assert_eq!(warnings[0].item_title.as_deref(), Some("Office WiFi"));
     }
 }

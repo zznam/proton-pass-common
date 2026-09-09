@@ -1,5 +1,5 @@
 use credential_exchange_format::{
-    B64Url, Credential, CustomFieldsCredential, EditableFieldValue, Header, Item, TotpCredential,
+    B64Url, Credential, CustomFieldsCredential, EditableFieldValue, Header, TotpCredential,
 };
 use proton_pass_types::{
     CustomSection, ItemContent, ItemData, ItemExtraField, ItemExtraFieldContent, LoginItem, NoteItem, VaultData,
@@ -130,6 +130,7 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
 
     let mut extra_fields: Vec<ItemExtraField> = Vec::new();
     let mut note_text = String::new();
+    let mut extra_note_index = 0;
     let mut public_key = String::new();
     let mut extra_sections: Vec<CustomSection> = Vec::new();
 
@@ -192,12 +193,7 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
         }
         Primary::SshKey => {
             let ssh_item = item.credentials.iter().find_map(|c| match c {
-                Credential::SshKey(cred) => Some(ssh_key::credential_to_ssh_key(
-                    cred,
-                    String::new(),
-                    Some(&title),
-                    warnings,
-                )),
+                Credential::SshKey(cred) => ssh_key::credential_to_ssh_key(cred, String::new(), Some(&title), warnings),
                 _ => None,
             });
 
@@ -229,7 +225,7 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
         }
         Primary::Wifi => {
             let wifi_item = item.credentials.iter().find_map(|c| match c {
-                Credential::Wifi(cred) => Some(wifi::credential_to_wifi(cred)),
+                Credential::Wifi(cred) => Some(wifi::credential_to_wifi(cred, Some(&title), warnings)),
                 _ => None,
             });
 
@@ -318,6 +314,17 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
                 let text = note::credential_to_note_text(cred);
                 if note_text.is_empty() {
                     note_text = text;
+                } else if !text.is_empty() {
+                    extra_note_index += 1;
+                    let name = if extra_note_index == 1 {
+                        "Note".to_string()
+                    } else {
+                        format!("Note {extra_note_index}")
+                    };
+                    extra_fields.push(ItemExtraField {
+                        name,
+                        content: ItemExtraFieldContent::Text(text),
+                    });
                 }
             }
             Credential::CustomFields(cf) if matches!(primary, Primary::SshKey) && cf.label.is_none() => {
@@ -391,17 +398,46 @@ pub fn import(payload: &str) -> Result<CxfImportResult, CxfError> {
     let mut vaults = Vec::new();
 
     for account in &header.accounts {
-        let mut collected_item_ids = HashSet::new();
-        let items_by_id: HashMap<B64Url, &Item<ProtonExtension>> =
-            account.items.iter().map(|item| (item.id.clone(), item)).collect();
+        let mut items_by_id: HashMap<&B64Url, Vec<usize>> = HashMap::new();
+        for (index, item) in account.items.iter().enumerate() {
+            items_by_id.entry(&item.id).or_default().push(index);
+        }
+        for (id, indices) in &items_by_id {
+            if indices.len() > 1 {
+                warnings.push(CxfWarning {
+                    item_title: None,
+                    message: format!(
+                        "Found {} items sharing the same id '{}' in the CXF payload; each was imported as a separate item",
+                        indices.len(),
+                        String::from(*id)
+                    ),
+                    kind: CxfWarningKind::MalformedInput,
+                });
+            }
+        }
+
+        // An item can belong to multiple collections (shared across vaults on other PMs), so the
+        // same id must resolve to the same item every time it's referenced. Only when an id is
+        // genuinely duplicated across distinct items we need to disambiguate which item a given
+        // reference resolves to. To do so, we cycle through the duplicates in a stable order.
+        let mut referenced_indices = HashSet::new();
+        let mut next_duplicate_index: HashMap<&B64Url, usize> = HashMap::new();
 
         for collection in &account.collections {
             let vault: VaultData = collection_to_vault(collection);
             let mut items = Vec::new();
             for linked in &collection.items {
-                if let Some(item) = items_by_id.get(&linked.item) {
-                    collected_item_ids.insert(item.id.clone());
-                    items.push(item_to_data(item, &mut warnings));
+                if let Some(indices) = items_by_id.get(&linked.item) {
+                    let index = if indices.len() == 1 {
+                        indices[0]
+                    } else {
+                        let cursor = next_duplicate_index.entry(&linked.item).or_insert(0);
+                        let index = indices[*cursor % indices.len()];
+                        *cursor += 1;
+                        index
+                    };
+                    referenced_indices.insert(index);
+                    items.push(item_to_data(&account.items[index], &mut warnings));
                 }
             }
             vaults.push(CxfImportedVault {
@@ -413,8 +449,9 @@ pub fn import(payload: &str) -> Result<CxfImportResult, CxfError> {
         let uncollected: Vec<ItemData> = account
             .items
             .iter()
-            .filter(|item| !collected_item_ids.contains(&item.id))
-            .map(|item| item_to_data(item, &mut warnings))
+            .enumerate()
+            .filter(|(index, _)| !referenced_indices.contains(index))
+            .map(|(_, item)| item_to_data(item, &mut warnings))
             .collect();
         if !uncollected.is_empty() {
             vaults.push(CxfImportedVault {

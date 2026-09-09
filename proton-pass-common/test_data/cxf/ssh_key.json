@@ -17,12 +17,12 @@
             {
               "type": "ssh-key",
               "keyType": "ssh-ed25519",
-              "privateKey": "cHJpdmF0ZS1rZXktZGF0YQ"
+              "privateKey": "LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KYjNCbGJuTnphQzFyWlhrdGRqRUFBQUFBQkc1dmJtVUFBQUFFYm05dVpRQUFBQUFBQUFBQkFBQUFNd0FBQUF0emMyZ3RaVwpReU5UVXhPUUFBQUNEWmw5b3l0Uis3MHdTTXpiTlRIdFpxcXJUVVBMdmRsdHUxaytTclp3aVZzQUFBQUlpRHk0SmdnOHVDCllBQUFBQXR6YzJndFpXUXlOVFV4T1FBQUFDRFpsOW95dFIrNzB3U016Yk5USHRacXFyVFVQTHZkbHR1MWsrU3Jad2lWc0EKQUFBRUNrQzU2STB3M2d3QnhYUHlxc1NyK2Ryc2lyb0tzdXl1WHJ2Uk1XS2VOZ2F0bVgyaksxSDd2VEJJek5zMU1lMW1xcQp0TlE4dTkyVzI3V1Q1S3RuQ0pXd0FBQUFBQUVDQXdRRgotLS0tLUVORCBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0K"
             },
             {
               "type": "custom-fields",
               "fields": [
-                { "fieldType": "string", "value": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5", "label": "public_key" }
+                { "fieldType": "string", "value": "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmX2jK1H7vTBIzNs1Me1mqqtNQ8u92W27WT5KtnCJWw", "label": "public_key" }
               ]
             }
           ]

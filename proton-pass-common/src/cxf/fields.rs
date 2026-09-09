@@ -3,7 +3,7 @@ use credential_exchange_format::{
     EditableFieldSubdivisionCode,
 };
 
-use super::ProtonExtension;
+use super::{CxfWarning, CxfWarningKind, ProtonExtension};
 
 pub(crate) fn string_field(value: String) -> EditableField<EditableFieldString, ProtonExtension> {
     value.into()
@@ -75,14 +75,30 @@ pub(crate) fn opt_country_field_to_string(
     field.map(String::from).unwrap_or_default()
 }
 
-pub(crate) fn opt_date_field(value: &str) -> Option<EditableField<EditableFieldDate, ProtonExtension>> {
-    let date = chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d").ok()?;
-    Some(EditableField {
-        id: None,
-        value: EditableFieldDate(date).into(),
-        label: None,
-        extensions: None,
-    })
+pub(crate) fn opt_date_field(
+    value: &str,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
+) -> Option<EditableField<EditableFieldDate, ProtonExtension>> {
+    if value.is_empty() {
+        return None;
+    }
+    match chrono::NaiveDate::parse_from_str(value, "%Y-%m-%d") {
+        Ok(date) => Some(EditableField {
+            id: None,
+            value: EditableFieldDate(date).into(),
+            label: None,
+            extensions: None,
+        }),
+        Err(_) => {
+            warnings.push(CxfWarning {
+                item_title: item_title.map(str::to_string),
+                message: format!("Could not export date field '{value}': expected format YYYY-MM-DD"),
+                kind: CxfWarningKind::MalformedInput,
+            });
+            None
+        }
+    }
 }
 
 pub(crate) fn opt_date_field_to_string(field: Option<EditableField<EditableFieldDate, ProtonExtension>>) -> String {

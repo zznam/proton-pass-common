@@ -55,7 +55,16 @@ const IDENTITY_STREET_ADDRESS: &str = "1 Main St";
 const IDENTITY_CITY: &str = "Springfield";
 
 const SSH_KEY_TITLE: &str = "My SSH Key";
-const SSH_PRIVATE_KEY: &str = "-----BEGIN OPENSSH PRIVATE KEY-----\nplaceholder\n-----END OPENSSH PRIVATE KEY-----";
+
+// Valid ssh private key for import tests
+const SSH_PRIVATE_KEY: &str = "-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACBeVJSD3sQ++JBzyIqfYPjwSBC1z46D45Q4F9whv14sQwAAAIijS+xBo0vs
+QQAAAAtzc2gtZWQyNTUxOQAAACBeVJSD3sQ++JBzyIqfYPjwSBC1z46D45Q4F9whv14sQw
+AAAEDQ8PaLBhyHNIrvq6LjORGRuDjaQ3f2vHIi+WYt+BrAKF5UlIPexD74kHPIip9g+PBI
+ELXPjoPjlDgX3CG/XixDAAAAAAECAwQF
+-----END OPENSSH PRIVATE KEY-----
+";
 const SSH_PUBLIC_KEY: &str = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5 test-key";
 
 const WIFI_TITLE: &str = "My WiFi";

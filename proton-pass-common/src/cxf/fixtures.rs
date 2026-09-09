@@ -172,7 +172,10 @@ fn ssh_key_fixture_imports_correctly() {
     let ItemContent::SshKey(ssh) = &item.content else {
         panic!("expected ssh key content")
     };
-    assert_eq!(ssh.public_key, "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5");
+    assert_eq!(
+        ssh.public_key,
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINmX2jK1H7vTBIzNs1Me1mqqtNQ8u92W27WT5KtnCJWw"
+    );
     assert!(!ssh.private_key.is_empty());
 }
 
@@ -231,6 +234,12 @@ fn multi_vault_fixture_imports_into_separate_vaults() {
     let result = import_cxf(payload).unwrap();
     assert!(result.warnings.is_empty(), "{:?}", result.warnings);
     assert_eq!(result.vaults.len(), 2);
+    for vault in &result.vaults {
+        let name = vault.vault.as_ref().unwrap().name.clone();
+        assert_eq!(vault.items.len(), 1);
+        let expected_title = if name == "Vault One" { "Item One" } else { "Item Two" };
+        assert_eq!(vault.items[0].title, expected_title);
+    }
     let names: Vec<String> = result
         .vaults
         .iter()
