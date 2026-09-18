@@ -26,16 +26,16 @@ fn find_bytes(params: &[(ProtonLabel, ProtonValue)], label: i64) -> Option<Vec<u
 
 fn hmac_secret_to_fido2_extensions(extensions: &ProtonPassCredentialExtensions) -> Option<Fido2Extensions> {
     let hmac = extensions.hmac_secret.as_ref()?;
-    let cred_without_uv = hmac
+    let hmac_credentials = hmac
         .cred_without_uv
         .clone()
-        .unwrap_or_else(|| hmac.cred_with_uv.clone());
-    Some(Fido2Extensions {
-        hmac_credentials: Some(Fido2HmacCredentials {
+        .map(|cred_without_uv| Fido2HmacCredentials {
             algorithm: Fido2HmacCredentialAlgorithm::HmacSha256,
             cred_with_uv: B64Url::from(hmac.cred_with_uv.clone()),
             cred_without_uv: B64Url::from(cred_without_uv),
-        }),
+        });
+    Some(Fido2Extensions {
+        hmac_credentials,
         cred_blob: None,
         large_blob: None,
         payments: None,
@@ -369,14 +369,12 @@ mod tests {
     }
 
     #[test]
-    fn missing_cred_without_uv_is_restored_as_none_after_round_trip() {
-        let cred_with_uv = vec![1, 1, 1];
-
+    fn uv_only_credential_omits_hmac_credentials_on_export() {
         let mut passkey = sample_passkey(sample_ec2_key());
         let mut key = deserialize_passkey(&passkey.content).unwrap();
         key.extensions = ProtonPassCredentialExtensions {
             hmac_secret: Some(ProtonPassStoredHmacSecret {
-                cred_with_uv: cred_with_uv.clone(),
+                cred_with_uv: vec![1, 1, 1],
                 cred_without_uv: None,
             }),
         };
@@ -386,14 +384,46 @@ mod tests {
         let Credential::Passkey(cred) = cred else {
             panic!("expected passkey credential")
         };
-        let hmac = cred
-            .fido2_extensions
-            .as_ref()
-            .unwrap()
-            .hmac_credentials
-            .as_ref()
-            .unwrap();
-        assert_eq!(Vec::from(hmac.cred_without_uv.clone()), cred_with_uv);
+        assert!(
+            cred.fido2_extensions
+                .as_ref()
+                .and_then(|ext| ext.hmac_credentials.as_ref())
+                .is_none()
+        );
+
+        let back = credential_to_passkey(&cred).unwrap();
+        let back_key = deserialize_passkey(&back.content).unwrap();
+        assert!(back_key.extensions.hmac_secret.is_none());
+    }
+
+    #[test]
+    fn imported_duplicated_values_are_normalized_to_none() {
+        let cred_with_uv = vec![1, 1, 1];
+        let cred = PasskeyCredential {
+            credential_id: B64Url::from(vec![1, 2, 3, 4]),
+            rp_id: "example.com".to_string(),
+            username: "jane".to_string(),
+            user_display_name: "Jane Doe".to_string(),
+            user_handle: B64Url::from(vec![5, 6, 7, 8]),
+            key: {
+                let secret = SecretKey::from_slice(&[
+                    0x1a, 0x2b, 0x3c, 0x4d, 0x5e, 0x6f, 0x70, 0x81, 0x92, 0xa3, 0xb4, 0xc5, 0xd6, 0xe7, 0xf8, 0x09,
+                    0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x01,
+                ])
+                .unwrap();
+                B64Url::from(secret.to_pkcs8_der().unwrap().as_bytes().to_vec())
+            },
+            fido2_extensions: Some(Fido2Extensions {
+                hmac_credentials: Some(Fido2HmacCredentials {
+                    algorithm: Fido2HmacCredentialAlgorithm::HmacSha256,
+                    cred_with_uv: B64Url::from(cred_with_uv.clone()),
+                    cred_without_uv: B64Url::from(cred_with_uv.clone()),
+                }),
+                cred_blob: None,
+                large_blob: None,
+                payments: None,
+            }),
+        };
 
         let back = credential_to_passkey(&cred).unwrap();
         let back_key = deserialize_passkey(&back.content).unwrap();
