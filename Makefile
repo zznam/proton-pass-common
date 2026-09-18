@@ -77,6 +77,7 @@ clean: ## Remove compile artifacts
 	@rm -rf proton-pass-mobile/src/*.h
 	@rm -rf proton-pass-mobile/src/*.modulemap
 	@rm -rf proton-pass-mobile/android/lib/build
+	@rm -rf proton-pass-mobile/android/libTest/build
 	@rm -rf proton-pass-mobile/android/lib/src/main/jniLibs
 	@rm -rf proton-pass-mobile/android/build
 	@rm -rf proton-pass-mobile/src/proton/android/pass/commonrust/proton_pass_common_mobile.kt
@@ -84,8 +85,11 @@ clean: ## Remove compile artifacts
 	@rm -rf proton-pass-mobile/iOS/headers
 	@rm -rf proton-pass-mobile/iOS/PassRustCore/Sources/PassRustCore/PassRustCore.swift
 	@rm -rf proton-pass-mobile/iOS/PassRustCore/*.xcframework
+	@rm -rf proton-pass-mobile/iOS/PassRustCore/.build
 	@rm -rf ${WEB_BUILD_DIR}
 	@rm -rf ${WEB_TEST_BUILD_DIR}
+	@rm -rf proton-pass-web/pkg
+	@rm -rf proton-authenticator-web/pkg
 	@rm -rf proton-authenticator-mobile/src/uniffi
 	@rm -rf proton-authenticator-mobile/src/*.swift
 	@rm -rf proton-authenticator-mobile/src/*.h
