@@ -1,3 +1,4 @@
+mod archive;
 mod handshake;
 mod hpke;
 
@@ -91,6 +92,7 @@ pub enum CxpError {
     SerializationError(String),
     DeserializationError(String),
     UnsupportedHpkeParameters(String),
+    UnsupportedArchiveAlgorithm(String),
     EncryptionError(String),
     DecryptionError(String),
     InvalidState(String),
@@ -111,13 +113,11 @@ pub struct CxpExportResponse {
 
 fn begin_cxp_export(request: CxpExportRequest) -> Result<(String, CxpExportEnvelope), CxpError> {
     let keypair = hpke::generate_keypair();
-    let export_request = handshake::build_export_request(
+    let serialized = handshake::build_export_request(
         &request.importer_name,
         request.supported_credential_types,
         keypair.public_jwk,
-    );
-    let serialized = serde_json::to_string(&export_request)
-        .map_err(|e| CxpError::SerializationError(format!("failed to serialize CXP export request: {e}")))?;
+    )?;
 
     Ok((
         serialized.clone(),
@@ -186,6 +186,7 @@ fn filter_export_input_by_requested_types(export: &mut CxfExportInput, requested
 fn summarize_export_request(request: &str) -> Result<CxpExportRequestSummary, CxpError> {
     let parsed_request = handshake::parse_export_request(request)?;
     let requested_credential_types = parsed_request
+        .request
         .credential_types
         .as_deref()
         .unwrap_or(&[])
@@ -194,19 +195,20 @@ fn summarize_export_request(request: &str) -> Result<CxpExportRequestSummary, Cx
         .collect();
 
     Ok(CxpExportRequestSummary {
-        importer_name: parsed_request.importer,
+        importer_name: parsed_request.request.importer,
         requested_credential_types,
-        requests_all_credential_types: parsed_request.credential_types.is_none(),
+        requests_all_credential_types: parsed_request.request.credential_types.is_none(),
     })
 }
 
 fn respond_to_cxp_export(request: &str, mut export: CxfExportInput) -> Result<CxpExportResponse, CxpError> {
     let parsed_request = handshake::parse_export_request(request)?;
-    let recipient_key = handshake::negotiate_recipient_key(&parsed_request)?;
+    let (aead, recipient_key) = handshake::negotiate_recipient_key(&parsed_request.request)?;
+    let archive_algorithm = archive::negotiate(&parsed_request.archive)?;
 
     let mut warnings = Vec::new();
     exclude_items_with_no_representable_type(&mut export, &mut warnings);
-    if let Some(credential_types) = &parsed_request.credential_types {
+    if let Some(credential_types) = &parsed_request.request.credential_types {
         let requested: Vec<CxpCredentialType> = credential_types
             .iter()
             .filter_map(CxpCredentialType::from_upstream)
@@ -218,43 +220,49 @@ fn respond_to_cxp_export(request: &str, mut export: CxfExportInput) -> Result<Cx
     let cxf_result = crate::cxf::export_cxf(export).map_err(|e| CxpError::SerializationError(format!("{e}")))?;
     warnings.extend(cxf_result.warnings);
 
+    let compressed_payload = archive::compress(archive_algorithm, cxf_result.payload.as_bytes())?;
+
     let sealed = hpke::seal(
+        aead,
         &recipient_key,
-        parsed_request.importer.as_bytes(),
+        parsed_request.request.importer.as_bytes(),
         request.as_bytes(),
-        cxf_result.payload.as_bytes(),
+        &compressed_payload,
     )?;
 
     let response = ExportResponse {
         version: Version::V0,
-        hpke: hpke::supported_parameters(Some(sealed.encapped_key_jwk)),
+        hpke: hpke::selected_parameters(aead, sealed.encapped_key_jwk),
         exporter: exporter_name,
         payload: sealed.ciphertext.into(),
     };
 
-    let response = serde_json::to_vec(&response)
-        .map_err(|e| CxpError::SerializationError(format!("failed to serialize CXP export response: {e}")))?;
+    let response = handshake::build_export_response(&response, archive_algorithm)?;
 
     Ok(CxpExportResponse { response, warnings })
 }
 
 fn complete_cxp_export(envelope: CxpExportEnvelope, encrypted_response: &[u8]) -> Result<CxfImportResult, CxpError> {
-    let response = handshake::parse_export_response(encrypted_response)?;
-    handshake::validate_export_response(&response)?;
-    let encapped_key = response.hpke.key.clone().ok_or_else(|| {
+    let parsed_response = handshake::parse_export_response(encrypted_response)?;
+    let aead = handshake::validate_export_response(&parsed_response.response)?;
+    let encapped_key = parsed_response.response.hpke.key.clone().ok_or_else(|| {
         CxpError::UnsupportedHpkeParameters("CXP export response is missing the encapsulated key".to_string())
     })?;
 
-    let mut plaintext = hpke::open(
+    let plaintext = hpke::open(
+        aead,
         &envelope.ephemeral_private_key,
         &encapped_key,
         envelope.importer_name.as_bytes(),
         envelope.request.as_bytes(),
-        response.payload.as_ref(),
+        parsed_response.response.payload.as_ref(),
     )?;
 
+    let response_archive = archive::parse_selected(&parsed_response.archive)?;
+    let mut decompressed = Zeroizing::new(archive::decompress(response_archive, &plaintext)?);
+
     let payload = Zeroizing::new(
-        String::from_utf8(std::mem::take(&mut *plaintext))
+        String::from_utf8(std::mem::take(&mut *decompressed))
             .map_err(|e| CxpError::DeserializationError(format!("decrypted CXP payload was not valid UTF-8: {e}")))?,
     );
 
@@ -381,6 +389,130 @@ mod tests {
     }
 
     #[test]
+    fn export_request_includes_mode_and_archive_fields() {
+        let importer = CxpImportHandler::new();
+        let request = importer
+            .create_export_request(CxpExportRequest {
+                importer_name: "Proton Pass".to_string(),
+                supported_credential_types: vec![],
+            })
+            .unwrap();
+
+        let json: serde_json::Value = serde_json::from_str(&request).unwrap();
+        assert_eq!(json["mode"], "direct");
+        assert_eq!(json["archive"], serde_json::json!(["deflate"]));
+    }
+
+    #[test]
+    fn export_response_includes_archive_field() {
+        let importer = CxpImportHandler::new();
+        let exporter = CxpExportHandler::new();
+
+        let request = importer
+            .create_export_request(CxpExportRequest {
+                importer_name: "Proton Pass".to_string(),
+                supported_credential_types: vec![],
+            })
+            .unwrap();
+        let encrypted_response = exporter
+            .create_export_response(&request, sample_export_input())
+            .unwrap();
+
+        let json: serde_json::Value = serde_json::from_slice(&encrypted_response.response).unwrap();
+        assert_eq!(json["archive"], "deflate");
+    }
+
+    #[test]
+    fn export_request_offers_multiple_hpke_aead_suites() {
+        let importer = CxpImportHandler::new();
+        let request = importer
+            .create_export_request(CxpExportRequest {
+                importer_name: "Proton Pass".to_string(),
+                supported_credential_types: vec![],
+            })
+            .unwrap();
+
+        let json: serde_json::Value = serde_json::from_str(&request).unwrap();
+        let aeads: Vec<u64> = json["hpke"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|params| params["aead"].as_u64().unwrap())
+            .collect();
+        assert_eq!(aeads, vec![3, 1, 2]);
+    }
+
+    #[test]
+    fn export_succeeds_when_peer_only_offers_aes_256_gcm() {
+        let keypair = hpke::generate_keypair();
+        let request = handshake::build_export_request("Proton Pass", vec![], keypair.public_jwk).unwrap();
+        let mut request: serde_json::Value = serde_json::from_str(&request).unwrap();
+        let hpke_offers = request["hpke"].as_array().unwrap().clone();
+        let aes_256_offer = hpke_offers.into_iter().find(|params| params["aead"] == 2).unwrap();
+        request["hpke"] = serde_json::json!([aes_256_offer]);
+        let request = serde_json::to_string(&request).unwrap();
+
+        let exporter = CxpExportHandler::new();
+        let encrypted_response = exporter
+            .create_export_response(&request, sample_export_input())
+            .unwrap();
+        assert!(encrypted_response.warnings.is_empty());
+
+        let response_json: serde_json::Value = serde_json::from_slice(&encrypted_response.response).unwrap();
+        assert_eq!(response_json["hpke"]["aead"], 2);
+
+        let parsed_response = handshake::parse_export_response(&encrypted_response.response).unwrap();
+        let aead = handshake::validate_export_response(&parsed_response.response).unwrap();
+        let encapped_key = parsed_response.response.hpke.key.clone().unwrap();
+        let plaintext = hpke::open(
+            aead,
+            &keypair.private_key,
+            &encapped_key,
+            b"Proton Pass",
+            request.as_bytes(),
+            parsed_response.response.payload.as_ref(),
+        )
+        .unwrap();
+        let response_archive = archive::parse_selected(&parsed_response.archive).unwrap();
+        let decompressed = archive::decompress(response_archive, &plaintext).unwrap();
+        let payload = String::from_utf8(decompressed).unwrap();
+        let import_result = crate::cxf::import_cxf(&payload).unwrap();
+        assert_eq!(import_result.vaults.len(), 1);
+    }
+
+    #[test]
+    fn export_request_missing_mode_is_rejected() {
+        let request = r#"{
+            "version": 0,
+            "hpke": [],
+            "importer": "Some Importer",
+            "archive": ["deflate"]
+        }"#;
+
+        let exporter = CxpExportHandler::new();
+        let result = exporter.create_export_response(request, sample_export_input());
+        assert!(matches!(result, Err(CxpError::DeserializationError(_))));
+    }
+
+    #[test]
+    fn export_request_with_unsupported_archive_algorithm_is_rejected_cleanly() {
+        let importer = CxpImportHandler::new();
+        let request = importer
+            .create_export_request(CxpExportRequest {
+                importer_name: "Proton Pass".to_string(),
+                supported_credential_types: vec![],
+            })
+            .unwrap();
+        let mut request: serde_json::Value = serde_json::from_str(&request).unwrap();
+        request["archive"] = serde_json::json!(["zip"]);
+        let request = serde_json::to_string(&request).unwrap();
+
+        let exporter = CxpExportHandler::new();
+        let result = exporter.create_export_response(&request, sample_export_input());
+        assert!(matches!(result, Err(CxpError::UnsupportedArchiveAlgorithm(_))));
+    }
+
+    #[test]
     fn processing_a_response_without_a_pending_request_returns_invalid_state() {
         let importer = CxpImportHandler::new();
         let result = importer.process_export_response(b"anything");
@@ -450,7 +582,9 @@ mod tests {
                 "aead": 2,
                 "key": null
             }],
-            "importer": "Some Importer"
+            "importer": "Some Importer",
+            "mode": "direct",
+            "archive": ["deflate"]
         }"#;
 
         let exporter = CxpExportHandler::new();
@@ -509,7 +643,9 @@ mod tests {
             "version": 0,
             "hpke": [],
             "importer": "Some Importer",
-            "credentialTypes": ["basic-auth", "some-future-type"]
+            "credentialTypes": ["basic-auth", "some-future-type"],
+            "mode": "direct",
+            "archive": ["deflate"]
         }"#;
 
         let exporter = CxpExportHandler::new();
@@ -827,7 +963,8 @@ mod tests {
             "version": 7,
             "hpke": { "mode": "base", "kem": 32, "kdf": 1, "aead": 3, "key": null },
             "exporter": "Other App",
-            "payload": "AAAA"
+            "payload": "AAAA",
+            "archive": "deflate"
         }"#;
 
         let result = importer.process_export_response(response.as_bytes());

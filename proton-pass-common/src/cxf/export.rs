@@ -59,7 +59,7 @@ fn item_to_export(item: &ItemData, warnings: &mut Vec<CxfWarning>) -> ItemExport
                 credentials.push(cred);
             }
             if !login_item.totp_uri.is_empty() {
-                match login::totp_uri_to_credential(&login_item.totp_uri) {
+                match login::totp_uri_to_credential(&login_item.totp_uri, title, warnings) {
                     Some(cred) => credentials.push(cred),
                     None => warnings.push(CxfWarning {
                         item_title: title.map(str::to_string),
@@ -114,7 +114,7 @@ fn item_to_export(item: &ItemData, warnings: &mut Vec<CxfWarning>) -> ItemExport
     }
 
     for uri in collect_extra_totps(item) {
-        match login::totp_uri_to_credential(&uri) {
+        match login::totp_uri_to_credential(&uri, title, warnings) {
             Some(cred) => credentials.push(cred),
             None => warnings.push(CxfWarning {
                 item_title: title.map(str::to_string),

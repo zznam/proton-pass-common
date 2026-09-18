@@ -1708,6 +1708,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd5130e119706b4d8c2180da6126f7e60b6c38c2d340d539219f57051f0a7af7"
 dependencies = [
  "aead",
+ "aes-gcm",
  "chacha20poly1305",
  "getrandom 0.4.3",
  "hkdf",
@@ -2957,6 +2958,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a89322df9ebe1c1578d689c92318e070967d1042b512afbe49518723f4e6d5cd"
 
 [[package]]
+name = "pkcs1"
+version = "0.8.0-rc.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "986d2e952779af96ea048f160fd9194e1751b4faea78bcf3ceb456efe008088e"
+dependencies = [
+ "der",
+ "spki",
+]
+
+[[package]]
 name = "pkcs8"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3340,12 +3351,15 @@ dependencies = [
  "ed25519-dalek",
  "email_address",
  "file-format",
+ "flate2",
  "hpke",
  "image",
  "jose-jwk",
  "lazy_static",
  "luhn",
  "p256",
+ "p384",
+ "p521",
  "parking_lot",
  "passkey",
  "passkey-authenticator",
@@ -3361,6 +3375,7 @@ dependencies = [
  "rand 0.10.2",
  "regex-lite",
  "rmp-serde",
+ "rsa",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -3940,9 +3955,12 @@ dependencies = [
  "crypto-bigint",
  "crypto-primes",
  "digest 0.11.3",
+ "pkcs1",
+ "pkcs8",
  "rand_core 0.10.1",
  "sha2 0.11.0",
  "signature",
+ "spki",
  "zeroize",
 ]
 

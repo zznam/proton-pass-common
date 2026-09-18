@@ -237,7 +237,8 @@ class CxpTest {
                 "version": 7,
                 "hpke": { "mode": "base", "kem": 32, "kdf": 1, "aead": 3, "key": null },
                 "exporter": "Other App",
-                "payload": "AAAA"
+                "payload": "AAAA",
+                "archive": "deflate"
             }
         """.trimIndent()
 

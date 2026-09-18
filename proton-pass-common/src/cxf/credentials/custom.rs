@@ -1,10 +1,13 @@
 use chrono::DateTime;
 use credential_exchange_format::{
-    Credential, CustomFieldsCredential, EditableField, EditableFieldDate, EditableFieldValue,
+    ApiKeyCredential, Credential, CustomFieldsCredential, EditableField, EditableFieldDate, EditableFieldValue,
 };
 use proton_pass_types::{CustomItem, CustomSection, ItemExtraField, ItemExtraFieldContent};
 
-use crate::cxf::{CxfCredential, CxfWarning, CxfWarningKind, ProtonExtension};
+use crate::cxf::{
+    CxfCredential, CxfWarning, CxfWarningKind, ProtonExtension,
+    fields::{opt_concealed_field_to_string, opt_date_field_to_string, opt_field_to_string},
+};
 
 pub(crate) fn extra_field_to_editable_value(field: &ItemExtraField) -> Option<EditableFieldValue<ProtonExtension>> {
     match &field.content {
@@ -166,6 +169,69 @@ pub(crate) fn credentials_to_custom_item(
     }
 }
 
+pub(crate) fn api_key_credential_to_custom_item(cred: &ApiKeyCredential<ProtonExtension>) -> CustomItem {
+    CustomItem {
+        sections: vec![CustomSection {
+            section_name: "API Key".to_string(),
+            section_fields: api_key_credential_to_extra_fields(cred),
+        }],
+    }
+}
+
+pub(crate) fn api_key_credential_to_extra_fields(cred: &ApiKeyCredential<ProtonExtension>) -> Vec<ItemExtraField> {
+    let mut fields = Vec::new();
+
+    let key = opt_concealed_field_to_string(cred.key.clone());
+    if !key.is_empty() {
+        fields.push(ItemExtraField {
+            name: "API Key".to_string(),
+            content: ItemExtraFieldContent::Hidden(key),
+        });
+    }
+
+    let username = opt_field_to_string(cred.username.clone());
+    if !username.is_empty() {
+        fields.push(ItemExtraField {
+            name: "Username".to_string(),
+            content: ItemExtraFieldContent::Text(username),
+        });
+    }
+
+    let key_type = opt_field_to_string(cred.key_type.clone());
+    if !key_type.is_empty() {
+        fields.push(ItemExtraField {
+            name: "Key Type".to_string(),
+            content: ItemExtraFieldContent::Text(key_type),
+        });
+    }
+
+    let url = opt_field_to_string(cred.url.clone());
+    if !url.is_empty() {
+        fields.push(ItemExtraField {
+            name: "URL".to_string(),
+            content: ItemExtraFieldContent::Text(url),
+        });
+    }
+
+    let valid_from = opt_date_field_to_string(cred.valid_from.clone());
+    if !valid_from.is_empty() {
+        fields.push(ItemExtraField {
+            name: "Valid From".to_string(),
+            content: ItemExtraFieldContent::Text(valid_from),
+        });
+    }
+
+    let expiry_date = opt_date_field_to_string(cred.expiry_date.clone());
+    if !expiry_date.is_empty() {
+        fields.push(ItemExtraField {
+            name: "Expires".to_string(),
+            content: ItemExtraFieldContent::Text(expiry_date),
+        });
+    }
+
+    fields
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -291,5 +357,52 @@ mod tests {
         let mut warnings = Vec::new();
         let section = credential_to_custom_section(&cred, None, &mut warnings);
         assert_eq!(section.section_name, "Custom Fields");
+    }
+
+    #[test]
+    fn api_key_credential_maps_present_fields_to_custom_fields() {
+        let cred = ApiKeyCredential::<ProtonExtension> {
+            key: Some("secret-token".to_string().into()),
+            username: Some("service-account".to_string().into()),
+            key_type: Some("Bearer".to_string().into()),
+            url: Some("https://api.example.com".to_string().into()),
+            valid_from: None,
+            expiry_date: None,
+        };
+        let custom_item = api_key_credential_to_custom_item(&cred);
+        assert_eq!(custom_item.sections.len(), 1);
+        let fields = &custom_item.sections[0].section_fields;
+        assert_eq!(fields.len(), 4);
+        assert!(fields.contains(&ItemExtraField {
+            name: "API Key".to_string(),
+            content: ItemExtraFieldContent::Hidden("secret-token".to_string()),
+        }));
+        assert!(fields.contains(&ItemExtraField {
+            name: "Username".to_string(),
+            content: ItemExtraFieldContent::Text("service-account".to_string()),
+        }));
+        assert!(fields.contains(&ItemExtraField {
+            name: "Key Type".to_string(),
+            content: ItemExtraFieldContent::Text("Bearer".to_string()),
+        }));
+        assert!(fields.contains(&ItemExtraField {
+            name: "URL".to_string(),
+            content: ItemExtraFieldContent::Text("https://api.example.com".to_string()),
+        }));
+    }
+
+    #[test]
+    fn api_key_credential_with_no_fields_produces_an_empty_section() {
+        let cred = ApiKeyCredential::<ProtonExtension> {
+            key: None,
+            username: None,
+            key_type: None,
+            url: None,
+            valid_from: None,
+            expiry_date: None,
+        };
+        let custom_item = api_key_credential_to_custom_item(&cred);
+        assert_eq!(custom_item.sections.len(), 1);
+        assert!(custom_item.sections[0].section_fields.is_empty());
     }
 }

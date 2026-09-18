@@ -57,6 +57,11 @@ fn fido2_extensions_to_hmac_secret(extensions: Option<&Fido2Extensions>) -> Prot
 
 pub(crate) fn passkey_to_credential(passkey: &PassPasskey) -> Result<CxfCredential, String> {
     let proton_pass_key = deserialize_passkey(&passkey.content).map_err(|e| format!("{e:?}"))?;
+
+    if proton_pass_key.counter.is_some_and(|counter| counter != 0) {
+        return Err("passkey uses a non-zero signature counter and must be excluded from the export".to_string());
+    }
+
     let key = &proton_pass_key.key;
 
     let der = match &key.kty {
@@ -430,6 +435,36 @@ mod tests {
         let back_hmac = back_key.extensions.hmac_secret.unwrap();
         assert_eq!(back_hmac.cred_with_uv, cred_with_uv);
         assert_eq!(back_hmac.cred_without_uv, None);
+    }
+
+    #[test]
+    fn zero_counter_passkey_is_exported() {
+        let mut passkey = sample_passkey(sample_ec2_key());
+        let mut key = deserialize_passkey(&passkey.content).unwrap();
+        key.counter = Some(0);
+        passkey.content = serialize_passkey(&key).unwrap();
+
+        assert!(passkey_to_credential(&passkey).is_ok());
+    }
+
+    #[test]
+    fn missing_counter_passkey_is_exported() {
+        let mut passkey = sample_passkey(sample_ec2_key());
+        let mut key = deserialize_passkey(&passkey.content).unwrap();
+        key.counter = None;
+        passkey.content = serialize_passkey(&key).unwrap();
+
+        assert!(passkey_to_credential(&passkey).is_ok());
+    }
+
+    #[test]
+    fn non_zero_counter_passkey_is_excluded_from_export() {
+        let mut passkey = sample_passkey(sample_ec2_key());
+        let mut key = deserialize_passkey(&passkey.content).unwrap();
+        key.counter = Some(7);
+        passkey.content = serialize_passkey(&key).unwrap();
+
+        assert!(passkey_to_credential(&passkey).is_err());
     }
 
     #[test]

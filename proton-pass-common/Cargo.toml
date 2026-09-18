@@ -16,6 +16,9 @@ cxf = [
     "dep:proton-pass-types",
     "dep:chrono",
     "dep:p256",
+    "dep:p384",
+    "dep:p521",
+    "dep:rsa",
     "dep:ed25519-dalek",
     "dep:pkcs8",
 ]
@@ -26,6 +29,7 @@ cxp = [
     "dep:jose-jwk",
     "dep:parking_lot",
     "dep:zeroize",
+    "dep:flate2",
 ]
 duplicate = ["dep:proton-pass-types"]
 
@@ -47,11 +51,15 @@ credential-exchange-protocol = { git = "https://github.com/bitwarden/credential-
 
 chrono = { version = "0.4", default-features = false, features = ["clock"], optional = true }
 ed25519-dalek = { version = "3", features = ["pkcs8"], optional = true }
-hpke = { version = "0.14", default-features = false, features = ["alloc", "getrandom", "x25519", "chacha"], optional = true }
+flate2 = { version = "1", optional = true }
+hpke = { version = "0.14", default-features = false, features = ["alloc", "getrandom", "x25519", "chacha", "aes"], optional = true }
 jose-jwk = { version = "0.1", default-features = false, optional = true }
 p256 = { version = "0.14", optional = true }
+p384 = { version = "0.14", optional = true }
+p521 = { version = "0.14", optional = true }
 parking_lot = { version = "0.12", optional = true }
 pkcs8 = { version = "0.11", default-features = false, features = ["alloc"], optional = true }
+rsa = { version = "0.10.0-rc.18", optional = true }
 zeroize = { version = "1", optional = true }
 
 # Passkeys dependency

@@ -8,20 +8,79 @@ use super::CxpError;
 
 type Kem = hpke::kem::X25519HkdfSha256;
 type Kdf = hpke::kdf::HkdfSha256;
-type Aead = hpke::aead::ChaCha20Poly1305;
 
-pub(crate) fn supported_parameters(key: Option<Jwk>) -> HpkeParameters {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum CxpAead {
+    ChaCha20Poly1305,
+    AesGcm128,
+    AesGcm256,
+}
+
+const SUPPORTED_AEADS: [CxpAead; 3] = [CxpAead::ChaCha20Poly1305, CxpAead::AesGcm128, CxpAead::AesGcm256];
+
+impl CxpAead {
+    fn to_wire(self) -> HpkeAead {
+        match self {
+            Self::ChaCha20Poly1305 => HpkeAead::ChaCha20Poly1305,
+            Self::AesGcm128 => HpkeAead::Aes128Gcm,
+            Self::AesGcm256 => HpkeAead::Aes256Gcm,
+        }
+    }
+
+    fn from_wire(aead: HpkeAead) -> Option<Self> {
+        match aead {
+            HpkeAead::ChaCha20Poly1305 => Some(Self::ChaCha20Poly1305),
+            HpkeAead::Aes128Gcm => Some(Self::AesGcm128),
+            HpkeAead::Aes256Gcm => Some(Self::AesGcm256),
+            _ => None,
+        }
+    }
+}
+
+fn parameters_of(params: &HpkeParameters) -> Option<CxpAead> {
+    if !matches!(params.mode, HpkeMode::Base) {
+        return None;
+    }
+    if !matches!(params.kem, HpkeKem::DhX25519) {
+        return None;
+    }
+    if !matches!(params.kdf, HpkeKdf::HkdfSha256) {
+        return None;
+    }
+    CxpAead::from_wire(params.aead)
+}
+
+fn parameters_for(aead: CxpAead, key: Option<Jwk>) -> HpkeParameters {
     HpkeParameters {
         mode: HpkeMode::Base,
         kem: HpkeKem::DhX25519,
         kdf: HpkeKdf::HkdfSha256,
-        aead: HpkeAead::ChaCha20Poly1305,
+        aead: aead.to_wire(),
         key,
     }
 }
 
-pub(crate) fn is_supported(params: &HpkeParameters) -> bool {
-    *params == supported_parameters(None)
+pub(crate) fn offered_parameters(key: Jwk) -> Vec<HpkeParameters> {
+    SUPPORTED_AEADS
+        .iter()
+        .map(|aead| parameters_for(*aead, Some(key.clone())))
+        .collect()
+}
+
+pub(crate) fn negotiate(offered: &[HpkeParameters]) -> Option<(CxpAead, Jwk)> {
+    offered.iter().find_map(|params| {
+        let aead = parameters_of(params)?;
+        let key = params.key.clone()?;
+        Some((aead, key))
+    })
+}
+
+pub(crate) fn selected_parameters(aead: CxpAead, key: Jwk) -> HpkeParameters {
+    parameters_for(aead, Some(key))
+}
+
+pub(crate) fn negotiated_aead(params: &HpkeParameters) -> Result<CxpAead, CxpError> {
+    parameters_of(params).ok_or_else(|| CxpError::UnsupportedHpkeParameters("unsupported HPKE parameters".to_string()))
 }
 
 pub(crate) struct GeneratedKeyPair {
@@ -72,13 +131,42 @@ pub(crate) struct SealedMessage {
     pub ciphertext: Vec<u8>,
 }
 
-pub(crate) fn seal(recipient_jwk: &Jwk, info: &[u8], aad: &[u8], plaintext: &[u8]) -> Result<SealedMessage, CxpError> {
+pub(crate) fn seal(
+    aead: CxpAead,
+    recipient_jwk: &Jwk,
+    info: &[u8],
+    aad: &[u8],
+    plaintext: &[u8],
+) -> Result<SealedMessage, CxpError> {
     let recipient_key_bytes = jwk_to_x25519_bytes(recipient_jwk)?;
     let recipient_key = <Kem as KemTrait>::PublicKey::from_bytes(recipient_key_bytes)
         .map_err(|e| CxpError::UnsupportedHpkeParameters(format!("invalid HPKE public key: {e}")))?;
-    let (encapped_key, ciphertext) =
-        hpke::single_shot_seal::<Aead, Kdf, Kem>(&OpModeS::Base, &recipient_key, info, plaintext, aad)
-            .map_err(|e| CxpError::EncryptionError(format!("HPKE seal failed: {e}")))?;
+
+    let (encapped_key, ciphertext) = match aead {
+        CxpAead::ChaCha20Poly1305 => hpke::single_shot_seal::<hpke::aead::ChaCha20Poly1305, Kdf, Kem>(
+            &OpModeS::Base,
+            &recipient_key,
+            info,
+            plaintext,
+            aad,
+        ),
+        CxpAead::AesGcm128 => hpke::single_shot_seal::<hpke::aead::AesGcm128, Kdf, Kem>(
+            &OpModeS::Base,
+            &recipient_key,
+            info,
+            plaintext,
+            aad,
+        ),
+        CxpAead::AesGcm256 => hpke::single_shot_seal::<hpke::aead::AesGcm256, Kdf, Kem>(
+            &OpModeS::Base,
+            &recipient_key,
+            info,
+            plaintext,
+            aad,
+        ),
+    }
+    .map_err(|e| CxpError::EncryptionError(format!("HPKE seal failed: {e}")))?;
+
     Ok(SealedMessage {
         encapped_key_jwk: x25519_bytes_to_jwk(&encapped_key.to_bytes()),
         ciphertext,
@@ -86,6 +174,7 @@ pub(crate) fn seal(recipient_jwk: &Jwk, info: &[u8], aad: &[u8], plaintext: &[u8
 }
 
 pub(crate) fn open(
+    aead: CxpAead,
     private_key: &[u8],
     encapped_key_jwk: &Jwk,
     info: &[u8],
@@ -96,7 +185,33 @@ pub(crate) fn open(
     let encapped_key_bytes = jwk_to_x25519_bytes(encapped_key_jwk)?;
     let encapped_key = <Kem as KemTrait>::EncappedKey::from_bytes(encapped_key_bytes)
         .map_err(|e| CxpError::DecryptionError(format!("invalid HPKE encapsulated key: {e}")))?;
-    hpke::single_shot_open::<Aead, Kdf, Kem>(&OpModeR::Base, &private_key, &encapped_key, info, ciphertext, aad)
-        .map(Zeroizing::new)
-        .map_err(|e| CxpError::DecryptionError(format!("HPKE open failed: {e}")))
+
+    match aead {
+        CxpAead::ChaCha20Poly1305 => hpke::single_shot_open::<hpke::aead::ChaCha20Poly1305, Kdf, Kem>(
+            &OpModeR::Base,
+            &private_key,
+            &encapped_key,
+            info,
+            ciphertext,
+            aad,
+        ),
+        CxpAead::AesGcm128 => hpke::single_shot_open::<hpke::aead::AesGcm128, Kdf, Kem>(
+            &OpModeR::Base,
+            &private_key,
+            &encapped_key,
+            info,
+            ciphertext,
+            aad,
+        ),
+        CxpAead::AesGcm256 => hpke::single_shot_open::<hpke::aead::AesGcm256, Kdf, Kem>(
+            &OpModeR::Base,
+            &private_key,
+            &encapped_key,
+            info,
+            ciphertext,
+            aad,
+        ),
+    }
+    .map(Zeroizing::new)
+    .map_err(|e| CxpError::DecryptionError(format!("HPKE open failed: {e}")))
 }

@@ -141,16 +141,32 @@ fn pass_algorithm_to_cxf(algorithm: PassAlgorithm) -> OTPHashAlgorithm {
     }
 }
 
-pub(crate) fn totp_uri_to_credential(uri: &str) -> Option<CxfCredential> {
+pub(crate) fn totp_uri_to_credential(
+    uri: &str,
+    item_title: Option<&str>,
+    warnings: &mut Vec<CxfWarning>,
+) -> Option<CxfCredential> {
     let totp = TOTP::from_uri(uri).ok()?;
     if totp.secret.is_empty() {
         return None;
     }
     let secret = B32::try_from(totp.secret.as_str()).ok()?;
 
+    let period = totp.get_period();
+    if period > u16::from(u8::MAX) {
+        warnings.push(CxfWarning {
+            item_title: item_title.map(str::to_string),
+            message: format!(
+                "TOTP period of {period}s exceeds the CXF format's maximum of {}s and was clamped",
+                u8::MAX
+            ),
+            kind: CxfWarningKind::MalformedInput,
+        });
+    }
+
     Some(Credential::Totp(Box::new(TotpCredential {
         secret,
-        period: totp.get_period().min(u8::MAX as u16) as u8,
+        period: period.min(u16::from(u8::MAX)) as u8,
         digits: totp.get_digits(),
         username: totp.label.clone(),
         algorithm: pass_algorithm_to_cxf(totp.get_algorithm()),
@@ -347,7 +363,8 @@ mod tests {
         let uri = format!(
             "otpauth://totp/jane.doe?secret={secret}&issuer={issuer}&algorithm=SHA256&digits={digits}&period={period}"
         );
-        let cred = totp_uri_to_credential(&uri).unwrap();
+        let mut export_warnings = Vec::new();
+        let cred = totp_uri_to_credential(&uri, None, &mut export_warnings).unwrap();
         let Credential::Totp(cred) = cred else {
             panic!("expected totp credential")
         };
@@ -355,6 +372,7 @@ mod tests {
         assert_eq!(cred.period, period);
         assert_eq!(cred.algorithm, OTPHashAlgorithm::Sha256);
         assert_eq!(cred.issuer.as_deref(), Some(issuer));
+        assert!(export_warnings.is_empty());
 
         let mut warnings = Vec::new();
         let back = credential_to_totp_uri(&cred, None, &mut warnings);
@@ -370,7 +388,7 @@ mod tests {
     #[test]
     fn hotp_uri_is_rejected() {
         let uri = "otpauth://hotp/jane.doe?secret=JBSWY3DPEHPK3PXP&counter=1";
-        assert!(totp_uri_to_credential(uri).is_none());
+        assert!(totp_uri_to_credential(uri, None, &mut Vec::new()).is_none());
     }
 
     #[test]
@@ -393,6 +411,19 @@ mod tests {
 
     #[test]
     fn empty_secret_totp_uri_is_ignored() {
-        assert!(totp_uri_to_credential("").is_none());
+        assert!(totp_uri_to_credential("", None, &mut Vec::new()).is_none());
+    }
+
+    #[test]
+    fn period_over_u8_max_is_clamped_with_warning() {
+        let uri = "otpauth://totp/jane.doe?secret=JBSWY3DPEHPK3PXP&period=300";
+        let mut warnings = Vec::new();
+        let cred = totp_uri_to_credential(uri, Some("Item"), &mut warnings).unwrap();
+        let Credential::Totp(cred) = cred else {
+            panic!("expected totp credential")
+        };
+        assert_eq!(cred.period, u8::MAX);
+        assert_eq!(warnings.len(), 1);
+        assert_eq!(warnings[0].kind, CxfWarningKind::MalformedInput);
     }
 }

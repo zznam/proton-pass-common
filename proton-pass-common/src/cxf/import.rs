@@ -2,15 +2,27 @@ use credential_exchange_format::{
     B64Url, Credential, CustomFieldsCredential, EditableFieldValue, Header, TotpCredential,
 };
 use proton_pass_types::{
-    CustomSection, ItemContent, ItemData, ItemExtraField, ItemExtraFieldContent, LoginItem, NoteItem, VaultData,
+    CustomItem, CustomSection, ItemContent, ItemData, ItemExtraField, ItemExtraFieldContent, LoginItem, NoteItem,
+    VaultData,
 };
 use std::collections::{HashMap, HashSet};
 
 use super::credentials::{credit_card, custom, identity, login, note, passkey, ssh_key, wifi};
 use super::vault::collection_to_vault;
 use super::{
-    CxfCredential, CxfError, CxfImportResult, CxfImportedVault, CxfItem, CxfWarning, CxfWarningKind, ProtonExtension,
+    CxfCollection, CxfCredential, CxfError, CxfImportResult, CxfImportedVault, CxfItem, CxfWarning, CxfWarningKind,
+    ProtonExtension,
 };
+
+fn collect_linked_items(collection: &CxfCollection) -> Vec<&credential_exchange_format::LinkedItem> {
+    let mut items: Vec<&credential_exchange_format::LinkedItem> = collection.items.iter().collect();
+    if let Some(sub_collections) = &collection.sub_collections {
+        for sub_collection in sub_collections {
+            items.extend(collect_linked_items(sub_collection));
+        }
+    }
+    items
+}
 
 enum Primary {
     Login,
@@ -18,6 +30,7 @@ enum Primary {
     Wifi,
     CreditCard,
     Identity,
+    ApiKey,
     Note,
     Custom,
     None,
@@ -52,6 +65,9 @@ fn pick_primary(credentials: &[CxfCredential]) -> Primary {
         )
     }) {
         return Primary::Identity;
+    }
+    if has(&|c| matches!(c, Credential::ApiKey(_))) {
+        return Primary::ApiKey;
     }
     if has(&|c| matches!(c, Credential::Note(_))) {
         return Primary::Note;
@@ -133,6 +149,7 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
     let mut extra_note_index = 0;
     let mut public_key = String::new();
     let mut extra_sections: Vec<CustomSection> = Vec::new();
+    let mut primary_api_key_index: Option<usize> = None;
 
     let mut content = match primary {
         Primary::Login => {
@@ -277,6 +294,25 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
 
             ItemContent::Identity(Box::new(identity_item))
         }
+        Primary::ApiKey => {
+            let custom_item = item
+                .credentials
+                .iter()
+                .enumerate()
+                .find_map(|(index, c)| match c {
+                    Credential::ApiKey(cred) => {
+                        primary_api_key_index = Some(index);
+                        Some(custom::api_key_credential_to_custom_item(cred))
+                    }
+                    _ => None,
+                })
+                .unwrap_or_else(|| CustomItem { sections: Vec::new() });
+
+            let split = split_totps(item, false);
+            apply_extra_totps(&title, split.extra, &mut extra_fields, warnings);
+
+            ItemContent::Custom(custom_item)
+        }
         Primary::Note => {
             let split = split_totps(item, false);
             apply_extra_totps(&title, split.extra, &mut extra_fields, warnings);
@@ -308,8 +344,11 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
         }
     };
 
-    for cred in &item.credentials {
+    for (index, cred) in item.credentials.iter().enumerate() {
         match cred {
+            Credential::ApiKey(cred) if Some(index) != primary_api_key_index => {
+                extra_fields.extend(custom::api_key_credential_to_extra_fields(cred));
+            }
             Credential::Note(cred) => {
                 let text = note::credential_to_note_text(cred);
                 if note_text.is_empty() {
@@ -356,7 +395,7 @@ fn item_to_data(item: &CxfItem, warnings: &mut Vec<CxfWarning>) -> ItemData {
                     extra_sections.push(section);
                 }
             }
-            Credential::File(_) | Credential::ItemReference(_) | Credential::ApiKey(_) => {
+            Credential::File(_) | Credential::ItemReference(_) => {
                 warnings.push(CxfWarning {
                     item_title: Some(title.clone()),
                     message: "Unsupported credential type was dropped".to_string(),
@@ -426,7 +465,7 @@ pub fn import(payload: &str) -> Result<CxfImportResult, CxfError> {
         for collection in &account.collections {
             let vault: VaultData = collection_to_vault(collection);
             let mut items = Vec::new();
-            for linked in &collection.items {
+            for linked in collect_linked_items(collection) {
                 if let Some(indices) = items_by_id.get(&linked.item) {
                     let index = if indices.len() == 1 {
                         indices[0]

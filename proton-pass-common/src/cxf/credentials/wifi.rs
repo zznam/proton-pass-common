@@ -108,7 +108,7 @@ mod tests {
     }
 
     #[test]
-    fn unspecified_security_omits_field() {
+    fn unspecified_security_omits_the_field() {
         let item = WifiItem {
             ssid: "N".to_string(),
             password: "p".to_string(),
@@ -120,6 +120,22 @@ mod tests {
             panic!("expected wifi credential")
         };
         assert!(cred.network_security_type.is_none());
+        let mut warnings = Vec::new();
+        assert_eq!(
+            credential_to_wifi(&cred, None, &mut warnings).security,
+            WifiSecurity::UnspecifiedWifiSecurity
+        );
+        assert!(warnings.is_empty());
+    }
+
+    #[test]
+    fn missing_security_field_is_imported_as_unspecified() {
+        let cred = WifiCredential {
+            ssid: opt_string_field("N"),
+            network_security_type: None,
+            passphrase: opt_concealed_field("p"),
+            hidden: None,
+        };
         let mut warnings = Vec::new();
         assert_eq!(
             credential_to_wifi(&cred, None, &mut warnings).security,

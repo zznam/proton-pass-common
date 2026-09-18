@@ -117,6 +117,20 @@ mod tests {
             .to_string()
     }
 
+    fn generate_ssh_private_key_pkcs8_der_b64url() -> String {
+        let item = SshKeyItem {
+            private_key: generate_ssh_private_key(),
+            public_key: String::new(),
+            sections: Vec::new(),
+        };
+        let mut warnings = Vec::new();
+        let cred = credentials::ssh_key::ssh_key_to_credential(&item, None, &mut warnings).unwrap();
+        let credential_exchange_format::Credential::SshKey(cred) = cred else {
+            panic!("expected ssh key credential")
+        };
+        cred.private_key.to_string()
+    }
+
     fn export_input(vaults: Vec<CxfVaultWithItems>) -> CxfExportInput {
         CxfExportInput {
             vaults,
@@ -894,8 +908,7 @@ mod tests {
     fn ssh_key_foreign_unlabeled_custom_field_is_kept_as_extra_field() {
         let extra_field_name = "foo";
         let extra_field_value = "bar";
-        let private_key =
-            credential_exchange_format::B64Url::from(generate_ssh_private_key().into_bytes().as_slice()).to_string();
+        let private_key = generate_ssh_private_key_pkcs8_der_b64url();
         let payload = format!(
             r#"{{
                 "version": {{ "major": 1, "minor": 0 }},
@@ -1359,5 +1372,213 @@ mod tests {
             && matches!(&f.content, ItemExtraFieldContent::Totp(u) if u.contains("GEZDGNBVGY3TQOJQ"))));
         assert!(imported.extra_fields.iter().any(|f| f.name == "TOTP 2"
             && matches!(&f.content, ItemExtraFieldContent::Totp(u) if u.contains("MFRGGZDFMZTWQ2LK"))));
+    }
+
+    #[test]
+    fn items_in_nested_sub_collections_are_kept_in_the_parent_vault() {
+        let payload = r#"{
+            "version": { "major": 1, "minor": 0 },
+            "exporterRpId": "example.com",
+            "exporterDisplayName": "Example Exporter",
+            "timestamp": 1700000000,
+            "accounts": [{
+                "id": "account-01",
+                "username": "",
+                "email": "",
+                "collections": [{
+                    "id": "dG9wLWxldmVs",
+                    "title": "Top Level",
+                    "items": [{ "item": "dG9wLWl0ZW0" }],
+                    "subCollections": [{
+                        "id": "bmVzdGVk",
+                        "title": "Nested",
+                        "items": [{ "item": "bmVzdGVkLWl0ZW0" }],
+                        "subCollections": [{
+                            "id": "ZGVlcGx5LW5lc3RlZA",
+                            "title": "Deeply Nested",
+                            "items": [{ "item": "ZGVlcGx5LW5lc3RlZC1pdGVt" }]
+                        }]
+                    }]
+                }],
+                "items": [
+                    {
+                        "id": "dG9wLWl0ZW0",
+                        "title": "Top item",
+                        "credentials": [{ "type": "note", "content": { "fieldType": "string", "value": "top" } }]
+                    },
+                    {
+                        "id": "bmVzdGVkLWl0ZW0",
+                        "title": "Nested item",
+                        "credentials": [{ "type": "note", "content": { "fieldType": "string", "value": "nested" } }]
+                    },
+                    {
+                        "id": "ZGVlcGx5LW5lc3RlZC1pdGVt",
+                        "title": "Deeply nested item",
+                        "credentials": [{ "type": "note", "content": { "fieldType": "string", "value": "deep" } }]
+                    }
+                ]
+            }]
+        }"#;
+
+        let result = import_cxf(payload).unwrap();
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+        assert_eq!(result.vaults.len(), 1);
+
+        let vault = &result.vaults[0];
+        assert!(vault.vault.is_some());
+        let titles: Vec<&str> = vault.items.iter().map(|item| item.title.as_str()).collect();
+        assert!(titles.contains(&"Top item"));
+        assert!(titles.contains(&"Nested item"));
+        assert!(titles.contains(&"Deeply nested item"));
+    }
+
+    #[test]
+    fn api_key_credential_is_imported_as_a_custom_item() {
+        let payload = r#"{
+            "version": { "major": 1, "minor": 0 },
+            "exporterRpId": "example.com",
+            "exporterDisplayName": "Example Exporter",
+            "timestamp": 1700000000,
+            "accounts": [{
+                "id": "account-01",
+                "username": "",
+                "email": "",
+                "collections": [],
+                "items": [{
+                    "id": "item-01",
+                    "title": "My API Key",
+                    "credentials": [{
+                        "type": "api-key",
+                        "key": { "fieldType": "concealed-string", "value": "secret-token" },
+                        "username": { "fieldType": "string", "value": "service-account" },
+                        "keyType": { "fieldType": "string", "value": "Bearer" },
+                        "url": { "fieldType": "string", "value": "https://api.example.com" }
+                    }]
+                }]
+            }]
+        }"#;
+
+        let result = import_cxf(payload).unwrap();
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+        let imported = &result.vaults[0].items[0];
+        assert_eq!(imported.title, "My API Key");
+        let ItemContent::Custom(custom_item) = &imported.content else {
+            panic!("expected custom item content")
+        };
+        assert_eq!(custom_item.sections.len(), 1);
+        let fields = &custom_item.sections[0].section_fields;
+        assert!(
+            fields.iter().any(|f| f.name == "API Key"
+                && matches!(&f.content, ItemExtraFieldContent::Hidden(v) if v == "secret-token"))
+        );
+        assert!(
+            fields.iter().any(|f| f.name == "Username"
+                && matches!(&f.content, ItemExtraFieldContent::Text(v) if v == "service-account"))
+        );
+        assert!(
+            fields
+                .iter()
+                .any(|f| f.name == "Key Type" && matches!(&f.content, ItemExtraFieldContent::Text(v) if v == "Bearer"))
+        );
+        assert!(fields.iter().any(|f| f.name == "URL"
+            && matches!(&f.content, ItemExtraFieldContent::Text(v) if v == "https://api.example.com")));
+    }
+
+    #[test]
+    fn secondary_api_key_alongside_login_is_kept_as_extra_fields() {
+        let payload = r#"{
+            "version": { "major": 1, "minor": 0 },
+            "exporterRpId": "example.com",
+            "exporterDisplayName": "Example Exporter",
+            "timestamp": 1700000000,
+            "accounts": [{
+                "id": "account-01",
+                "username": "",
+                "email": "",
+                "collections": [],
+                "items": [{
+                    "id": "item-01",
+                    "title": "My Login",
+                    "credentials": [
+                        {
+                            "type": "basic-auth",
+                            "username": { "fieldType": "string", "value": "alice" },
+                            "password": { "fieldType": "concealed-string", "value": "hunter2" }
+                        },
+                        {
+                            "type": "api-key",
+                            "key": { "fieldType": "concealed-string", "value": "secret-token" },
+                            "keyType": { "fieldType": "string", "value": "Bearer" }
+                        }
+                    ]
+                }]
+            }]
+        }"#;
+
+        let result = import_cxf(payload).unwrap();
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+        let imported = &result.vaults[0].items[0];
+        let ItemContent::Login(login) = &imported.content else {
+            panic!("expected login content")
+        };
+        assert_eq!(login.username, "alice");
+        assert!(
+            imported.extra_fields.iter().any(|f| f.name == "API Key"
+                && matches!(&f.content, ItemExtraFieldContent::Hidden(v) if v == "secret-token"))
+        );
+        assert!(
+            imported
+                .extra_fields
+                .iter()
+                .any(|f| f.name == "Key Type" && matches!(&f.content, ItemExtraFieldContent::Text(v) if v == "Bearer"))
+        );
+    }
+
+    #[test]
+    fn second_api_key_credential_on_the_same_item_is_kept_as_extra_fields() {
+        let payload = r#"{
+            "version": { "major": 1, "minor": 0 },
+            "exporterRpId": "example.com",
+            "exporterDisplayName": "Example Exporter",
+            "timestamp": 1700000000,
+            "accounts": [{
+                "id": "account-01",
+                "username": "",
+                "email": "",
+                "collections": [],
+                "items": [{
+                    "id": "item-01",
+                    "title": "My API Keys",
+                    "credentials": [
+                        {
+                            "type": "api-key",
+                            "key": { "fieldType": "concealed-string", "value": "primary-token" }
+                        },
+                        {
+                            "type": "api-key",
+                            "key": { "fieldType": "concealed-string", "value": "secondary-token" }
+                        }
+                    ]
+                }]
+            }]
+        }"#;
+
+        let result = import_cxf(payload).unwrap();
+        assert!(result.warnings.is_empty(), "{:?}", result.warnings);
+        let imported = &result.vaults[0].items[0];
+        let ItemContent::Custom(custom_item) = &imported.content else {
+            panic!("expected custom item content")
+        };
+        assert!(
+            custom_item.sections[0]
+                .section_fields
+                .iter()
+                .any(|f| f.name == "API Key"
+                    && matches!(&f.content, ItemExtraFieldContent::Hidden(v) if v == "primary-token"))
+        );
+        assert!(
+            imported.extra_fields.iter().any(|f| f.name == "API Key"
+                && matches!(&f.content, ItemExtraFieldContent::Hidden(v) if v == "secondary-token"))
+        );
     }
 }
