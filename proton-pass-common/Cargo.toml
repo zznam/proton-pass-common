@@ -9,7 +9,8 @@ doctest = false
 [features]
 default = []
 uniffi = ["dep:uniffi", "proton-pass-totp/uniffi"]
-wasm = ["dep:tsify", "dep:wasm-bindgen", "proton-pass-totp/wasm"]
+serde = ["proton-pass-totp/serde", "proton-pass-types?/serde"]
+wasm = ["serde", "dep:tsify", "dep:wasm-bindgen", "proton-pass-totp/wasm"]
 resize-image = ["dep:image", "dep:zenwebp"]
 cxf = [
     "dep:credential-exchange-format",

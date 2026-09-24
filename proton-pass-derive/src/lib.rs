@@ -86,6 +86,16 @@ impl Parse for FfiTypeAttrs {
     }
 }
 
+/// Serde derives for FFI types. Emitted under `wasm` (tsify needs them) and
+/// under a standalone `serde` feature, so native consumers can (de)serialize
+/// these types without pulling in the wasm bindings. Crates using these
+/// macros should declare `serde = []` and have `wasm` enable it.
+fn serde_derive() -> impl quote::ToTokens {
+    quote! {
+        #[cfg_attr(any(feature = "wasm", feature = "serde"), derive(serde::Serialize, serde::Deserialize))]
+    }
+}
+
 #[proc_macro_derive(Error)]
 pub fn derive_error(input: TokenStream) -> TokenStream {
     // Parse the input tokens into a syntax tree
@@ -110,6 +120,7 @@ pub fn derive_error(input: TokenStream) -> TokenStream {
 /// Automatically applies the appropriate derives for enabled FFI targets:
 /// - uniffi: derives uniffi::Record for structs, uniffi::Enum for enums
 /// - wasm: derives tsify::Tsify, serde::Serialize, serde::Deserialize
+/// - serde: derives serde::Serialize, serde::Deserialize (implied by wasm)
 ///
 /// Pass `only_web` or `only_mobile` when a type is only ever consumed directly by one FFI
 /// target (the other target either never sees it, or defines its own identically-named mirror
@@ -175,12 +186,16 @@ pub fn ffi_type(attr: TokenStream, item: TokenStream) -> TokenStream {
         quote! {}
     };
 
+    let serde_derive = serde_derive();
     let wasm_derive = if attrs.only_mobile {
         quote! {}
     } else if attrs.skip_serde_derive {
         quote! { #[cfg_attr(feature = "wasm", derive(tsify::Tsify))] }
     } else {
-        quote! { #[cfg_attr(feature = "wasm", derive(tsify::Tsify, serde::Serialize, serde::Deserialize))] }
+        quote! {
+            #serde_derive
+            #[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
+        }
     };
 
     let expanded = quote! {
@@ -199,6 +214,7 @@ pub fn ffi_type(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Automatically applies the appropriate derives for enabled FFI targets:
 /// - uniffi: derives uniffi::Error
 /// - wasm: derives tsify::Tsify, serde::Serialize, serde::Deserialize
+/// - serde: derives serde::Serialize, serde::Deserialize (implied by wasm)
 ///
 /// Note: You should also derive Debug for error types
 ///
@@ -214,11 +230,13 @@ pub fn ffi_type(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn ffi_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as Item);
+    let serde_derive = serde_derive();
 
     let expanded = quote! {
         #[cfg_attr(feature = "uniffi", derive(uniffi::Error))]
         #[cfg_attr(feature = "uniffi", uniffi(flat_error))]
-        #[cfg_attr(feature = "wasm", derive(tsify::Tsify, serde::Serialize, serde::Deserialize))]
+        #serde_derive
+        #[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
         #input
     };
 
@@ -230,6 +248,7 @@ pub fn ffi_error(_attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Automatically applies the appropriate derives for enabled FFI targets:
 /// - uniffi: registers the type as a custom newtype via `uniffi::custom_newtype!`
 /// - wasm: derives tsify::Tsify, serde::Serialize, serde::Deserialize
+/// - serde: derives serde::Serialize, serde::Deserialize (implied by wasm)
 ///
 /// # Example
 /// ```
@@ -245,9 +264,11 @@ pub fn ffi_id_type(_attr: TokenStream, item: TokenStream) -> TokenStream {
         syn::Fields::Unnamed(fields) if fields.unnamed.len() == 1 => &fields.unnamed[0].ty,
         _ => panic!("ffi_id_type can only be used on single-field tuple structs"),
     };
+    let serde_derive = serde_derive();
 
     let expanded = quote! {
-        #[cfg_attr(feature = "wasm", derive(serde::Serialize, serde::Deserialize, tsify::Tsify))]
+        #serde_derive
+        #[cfg_attr(feature = "wasm", derive(tsify::Tsify))]
         #input
 
         #[cfg(feature = "uniffi")]

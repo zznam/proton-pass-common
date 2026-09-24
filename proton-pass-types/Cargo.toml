@@ -9,7 +9,8 @@ doctest = false
 [features]
 default = []
 uniffi = ["dep:uniffi"]
-wasm = ["dep:tsify", "dep:wasm-bindgen"]
+serde = []
+wasm = ["serde", "dep:tsify", "dep:wasm-bindgen"]
 
 [dependencies]
 proton-pass-derive = { path = "../proton-pass-derive" }

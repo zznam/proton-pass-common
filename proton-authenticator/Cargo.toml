@@ -10,7 +10,8 @@ doctest = false
 default = ["qr"]
 qr = ["dep:image", "dep:rxing"]
 uniffi = ["dep:uniffi", "proton-pass-totp/uniffi"]
-wasm = ["dep:tsify", "dep:wasm-bindgen", "proton-pass-totp/wasm"]
+serde = ["proton-pass-totp/serde"]
+wasm = ["serde", "dep:tsify", "dep:wasm-bindgen", "proton-pass-totp/wasm"]
 
 [dependencies]
 proton-pass-derive = { path = "../proton-pass-derive" }

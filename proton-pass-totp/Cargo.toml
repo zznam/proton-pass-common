@@ -8,7 +8,8 @@ doctest = false
 
 [features]
 uniffi = ["dep:uniffi"]
-wasm = ["dep:tsify", "dep:wasm-bindgen"]
+serde = []
+wasm = ["serde", "dep:tsify", "dep:wasm-bindgen"]
 
 [dependencies]
 uniffi = { workspace = true, optional = true }
