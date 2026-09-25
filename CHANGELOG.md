@@ -6,6 +6,13 @@
 
 ### Other
 
+## 2.1.1
+
+### Other
+
+- Dependency upgrades
+- Improve internal crate exports
+
 ## 2.1.0
 
 ### Features :tada:
