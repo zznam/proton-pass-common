@@ -23,8 +23,6 @@ impl Parse for FfiTypeAttrs {
         let mut skip_serde_derive = false;
         let mut only_web = false;
         let mut only_mobile = false;
-        let mut only_web_span = None;
-        let mut only_mobile_span = None;
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
@@ -32,21 +30,43 @@ impl Parse for FfiTypeAttrs {
             match key.to_string().as_str() {
                 "skip_serde_derive" => skip_serde_derive = true,
                 "only_web" => {
+                    if only_mobile {
+                        return Err(syn::Error::new(
+                            key.span(),
+                            "only_web and only_mobile are mutually exclusive",
+                        ));
+                    }
+                    if mobile_name.is_some() {
+                        return Err(syn::Error::new(key.span(), "mobile_name has no effect with only_web"));
+                    }
                     only_web = true;
-                    only_web_span = Some(key.span());
                 }
                 "only_mobile" => {
+                    if only_web {
+                        return Err(syn::Error::new(
+                            key.span(),
+                            "only_web and only_mobile are mutually exclusive",
+                        ));
+                    }
+                    if web_name.is_some() {
+                        return Err(syn::Error::new(key.span(), "web_name has no effect with only_mobile"));
+                    }
                     only_mobile = true;
-                    only_mobile_span = Some(key.span());
                 }
                 "mobile_name" => {
                     input.parse::<Token![=]>()?;
                     let value: LitStr = input.parse()?;
+                    if only_web {
+                        return Err(syn::Error::new(value.span(), "mobile_name has no effect with only_web"));
+                    }
                     mobile_name = Some(value.value());
                 }
                 "web_name" => {
                     input.parse::<Token![=]>()?;
                     let value: LitStr = input.parse()?;
+                    if only_mobile {
+                        return Err(syn::Error::new(value.span(), "web_name has no effect with only_mobile"));
+                    }
                     web_name = Some(value.value());
                 }
                 _ => return Err(syn::Error::new(key.span(), "Unknown attribute")),
@@ -55,25 +75,6 @@ impl Parse for FfiTypeAttrs {
             if input.peek(Token![,]) {
                 input.parse::<Token![,]>()?;
             }
-        }
-
-        if only_web && only_mobile {
-            return Err(syn::Error::new(
-                only_mobile_span.unwrap(),
-                "only_web and only_mobile are mutually exclusive",
-            ));
-        }
-        if only_web && mobile_name.is_some() {
-            return Err(syn::Error::new(
-                only_web_span.unwrap(),
-                "mobile_name has no effect with only_web",
-            ));
-        }
-        if only_mobile && web_name.is_some() {
-            return Err(syn::Error::new(
-                only_mobile_span.unwrap(),
-                "web_name has no effect with only_mobile",
-            ));
         }
 
         Ok(FfiTypeAttrs {
