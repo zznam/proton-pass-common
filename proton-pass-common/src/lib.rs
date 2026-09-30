@@ -15,6 +15,8 @@ pub mod domain;
 pub mod duplicate;
 pub mod email;
 pub mod file;
+#[cfg(feature = "gunzip")]
+pub mod gunzip;
 pub mod host;
 
 #[cfg(feature = "duplicate")]

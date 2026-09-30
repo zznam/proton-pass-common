@@ -8,6 +8,7 @@ mod domain;
 mod duplicate;
 mod email;
 mod file;
+mod gunzip;
 mod host;
 #[cfg(feature = "resize-image")]
 mod image;
@@ -42,6 +43,7 @@ pub use domain::*;
 pub use duplicate::*;
 pub use email::*;
 pub use file::*;
+pub use gunzip::*;
 pub use host::*;
 #[cfg(feature = "resize-image")]
 pub use image::*;

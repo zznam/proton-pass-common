@@ -33,6 +33,7 @@ cxp = [
     "dep:flate2",
 ]
 duplicate = ["dep:proton-pass-types"]
+gunzip = ["dep:flate2"]
 
 [dependencies]
 uniffi = { workspace = true, optional = true }
