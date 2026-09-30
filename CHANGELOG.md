@@ -6,6 +6,13 @@
 
 ### Other
 
+## 2.2.0
+
+### Features :tada:
+
+- pass-common: Offer `gunzip` function
+- pass-mobile: Expose `gunzip` function
+
 ## 2.1.1
 
 ### Other
