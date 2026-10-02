@@ -1,4 +1,7 @@
-use proton_pass_types::{FolderData, ItemAttachmentContent, ItemData, VaultData};
+use proton_pass_types::{
+    FolderData, FolderDataParseResult, ItemAttachmentContent, ItemAttachmentContentParseResult, ItemData,
+    ItemDataParseResult, VaultData, VaultDataParseResult,
+};
 
 #[derive(Debug, proton_pass_derive::Error, uniffi::Error)]
 #[uniffi(flat_error)]
@@ -82,5 +85,21 @@ impl ProtonPassSerialization {
         data: Vec<u8>,
     ) -> Result<ItemAttachmentContent, ProtoSerializationError> {
         Ok(ItemAttachmentContent::deserialize(&data)?)
+    }
+
+    pub fn item_data_deserialize_many(&self, data: Vec<Vec<u8>>) -> ItemDataParseResult {
+        ItemDataParseResult::deserialize_many(&data)
+    }
+
+    pub fn vault_data_deserialize_many(&self, data: Vec<Vec<u8>>) -> VaultDataParseResult {
+        VaultDataParseResult::deserialize_many(&data)
+    }
+
+    pub fn folder_data_deserialize_many(&self, data: Vec<Vec<u8>>) -> FolderDataParseResult {
+        FolderDataParseResult::deserialize_many(&data)
+    }
+
+    pub fn item_attachment_content_deserialize_many(&self, data: Vec<Vec<u8>>) -> ItemAttachmentContentParseResult {
+        ItemAttachmentContentParseResult::deserialize_many(&data)
     }
 }

@@ -61,6 +61,7 @@ macro_rules! implement_custom_methods {
 pub use models::folder::*;
 pub use models::ids::*;
 pub use models::item::*;
+pub use models::parse_result::*;
 pub use models::vault::*;
 pub use protobuf;
 

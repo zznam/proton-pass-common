@@ -20,4 +20,5 @@
 pub(crate) mod folder;
 pub(crate) mod ids;
 pub(crate) mod item;
+pub(crate) mod parse_result;
 pub(crate) mod vault;
