@@ -1,0 +1,45 @@
+// Test-only schema (see src/update_tests.rs). Represents a *newer* build of a client: a strict
+// superset of `synthetic_known_v1.proto`. Field numbers and names of shared fields must match.
+syntax = "proto3";
+
+package synthetic_extended_v1;
+
+enum Kind {
+	KIND_UNSPECIFIED = 0;
+	KIND_A = 1;
+	KIND_B = 2;
+	KIND_C = 3; // unknown to the older build
+}
+
+message Inner {
+	string a = 1;
+	string b = 2; // unknown to the older build
+}
+
+message ExtraMessage {
+	string value = 1;
+}
+
+message Record {
+	string title = 1;
+	optional string note = 2;
+	repeated string tags = 3;
+	Inner inner = 4;
+	repeated Inner items = 5;
+	int32 count = 6;
+	Kind kind = 7;
+	oneof payload {
+		string text = 8;
+		Inner nested = 9;
+		bytes blob = 106; // oneof variant unknown to the older build
+	}
+	map<string, string> attrs = 10;
+
+	// Everything below is unknown to the older build
+	string extra_scalar = 100;
+	optional string extra_optional = 101;
+	repeated string extra_repeated = 102;
+	ExtraMessage extra_message = 103;
+	map<string, string> extra_map = 104;
+	int64 extra_varint = 105;
+}

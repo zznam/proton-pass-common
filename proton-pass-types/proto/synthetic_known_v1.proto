@@ -1,0 +1,31 @@
+// Test-only schema (see src/update_tests.rs). Represents the *older* build of a client: it only
+// knows a subset of the fields that `synthetic_extended_v1.proto` declares. Both files must stay in
+// sync, with the extended one being a strict superset of this one.
+syntax = "proto3";
+
+package synthetic_known_v1;
+
+enum Kind {
+	KIND_UNSPECIFIED = 0;
+	KIND_A = 1;
+	KIND_B = 2;
+}
+
+message Inner {
+	string a = 1;
+}
+
+message Record {
+	string title = 1;
+	optional string note = 2;
+	repeated string tags = 3;
+	Inner inner = 4;
+	repeated Inner items = 5;
+	int32 count = 6;
+	Kind kind = 7;
+	oneof payload {
+		string text = 8;
+		Inner nested = 9;
+	}
+	map<string, string> attrs = 10;
+}

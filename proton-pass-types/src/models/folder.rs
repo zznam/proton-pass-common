@@ -18,6 +18,7 @@
  */
 
 use crate::protos::folder::folder_v1;
+use crate::update::update_preserving_unknown;
 use anyhow::{Context, Result, anyhow};
 use protobuf::Message;
 
@@ -47,18 +48,7 @@ impl FolderData {
     }
 
     pub fn perform_update(original: &[u8], new: &Self) -> Result<Vec<u8>> {
-        let mut original_as_proto =
-            folder_v1::Folder::parse_from_bytes(original).context("Error decoding Folder from proto")?;
-        let new_as_proto = folder_v1::Folder::from(new.clone());
-        let new_as_proto_serialized = new_as_proto.to_vec().context("Error serializing folder to proto")?;
-
-        original_as_proto
-            .merge_from_bytes(&new_as_proto_serialized)
-            .context("Error performing folder updates")?;
-
-        original_as_proto
-            .to_vec()
-            .context("Error serializing updated folder to proto")
+        update_preserving_unknown(original, &folder_v1::Folder::from(new.clone()))
     }
 }
 

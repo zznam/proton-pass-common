@@ -22,6 +22,7 @@ mod field;
 mod flags;
 
 use crate::protos::item::item_v1;
+use crate::update::update_preserving_unknown;
 use anyhow::{Context, Result, anyhow};
 pub use attachment::*;
 pub use field::Field;
@@ -133,53 +134,7 @@ impl ItemData {
     }
 
     pub fn perform_update(original: &[u8], new: &Self) -> Result<Vec<u8>> {
-        let mut original_as_proto =
-            item_v1::Item::parse_from_bytes(original).context("Error decoding Item from proto")?;
-        let new_as_proto = item_v1::Item::from(new.clone());
-        let new_as_proto_serialized = new_as_proto.to_vec().context("Error serializing item to proto")?;
-
-        // Clear repeated fields that should be replaced, not appended
-        // This prevents duplication while still preserving unknown fields from newer protobuf versions
-        original_as_proto.extra_fields.clear();
-
-        // Clear fields marked as "repeated" in content based on the content type
-        if let Some(content) = original_as_proto.content.as_mut()
-            && let Some(content_inner) = content.content.as_mut()
-        {
-            match content_inner {
-                item_v1::content::Content::Login(login_mut) => {
-                    login_mut.urls.clear();
-                    login_mut.passkeys.clear();
-                    login_mut.autofill_urls.clear();
-                }
-                item_v1::content::Content::Custom(custom_mut) => {
-                    custom_mut.sections.clear();
-                }
-                item_v1::content::Content::Identity(identity_mut) => {
-                    identity_mut.extra_personal_details.clear();
-                    identity_mut.extra_address_details.clear();
-                    identity_mut.extra_contact_details.clear();
-                    identity_mut.extra_work_details.clear();
-                    identity_mut.extra_sections.clear();
-                }
-                item_v1::content::Content::SshKey(ssh_mut) => {
-                    ssh_mut.sections.clear();
-                }
-                item_v1::content::Content::Wifi(wifi_mut) => {
-                    wifi_mut.sections.clear();
-                }
-                _ => {}
-            }
-        }
-
-        original_as_proto
-            .merge_from_bytes(&new_as_proto_serialized)
-            .context("Error performing item updates")?;
-
-        let updated_serialized = original_as_proto
-            .to_vec()
-            .context("Error serializing updated item to proto")?;
-        Ok(updated_serialized)
+        update_preserving_unknown(original, &item_v1::Item::from(new.clone()))
     }
 
     pub fn deserialize(data: &[u8]) -> Result<Self> {

@@ -27,6 +27,10 @@ mod macros;
 
 mod models;
 mod protos;
+mod update;
+
+#[cfg(test)]
+mod update_tests;
 
 macro_rules! implement_custom_methods {
     ($t:ty) => {

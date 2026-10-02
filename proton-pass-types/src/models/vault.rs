@@ -18,6 +18,7 @@
  */
 
 use crate::protos::vault::vault_v1;
+use crate::update::update_preserving_unknown;
 use anyhow::{Context, Result, anyhow};
 use protobuf::Message;
 
@@ -53,29 +54,7 @@ impl VaultData {
     }
 
     pub fn perform_update(original: &[u8], new: &Self) -> Result<Vec<u8>> {
-        let mut original_as_proto =
-            vault_v1::Vault::parse_from_bytes(original).context("Error decoding Vault from proto")?;
-        let new_as_proto = vault_v1::Vault::from(new.clone());
-        let new_as_proto_serialized = new_as_proto.to_vec().context("Error serializing vault to proto")?;
-
-        // proto3 omits default-valued scalar fields from the wire, so merge_from_bytes leaves
-        // a field untouched when the new value equals its default (name/description reverting
-        // to "", display.icon/color reverting to Unspecified). Reset those fields to their
-        // default before merging so an update-to-default actually takes effect. Fields unknown
-        // to this build live in `special_fields` and are unaffected by this.
-        original_as_proto.name.clear();
-        original_as_proto.description.clear();
-        let display = original_as_proto.display.mut_or_insert_default();
-        display.icon = protobuf::EnumOrUnknown::new(vault_v1::VaultIcon::default());
-        display.color = protobuf::EnumOrUnknown::new(vault_v1::VaultColor::default());
-
-        original_as_proto
-            .merge_from_bytes(&new_as_proto_serialized)
-            .context("Error performing vault updates")?;
-
-        original_as_proto
-            .to_vec()
-            .context("Error serializing updated vault to proto")
+        update_preserving_unknown(original, &vault_v1::Vault::from(new.clone()))
     }
 }
 

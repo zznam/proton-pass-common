@@ -33,10 +33,21 @@ fn generate_protos() {
         ("vault_v1.proto", "vault"),
     ];
 
+    // Synthetic schemas used only by the unknown-field preservation tests
+    let test_files = vec![
+        ("synthetic_extended_v1.proto", "synthetic_extended"),
+        ("synthetic_known_v1.proto", "synthetic_known"),
+    ];
+
     let mut mod_file_content = String::new();
     for (proto_file, mod_name) in files {
         generate_proto(proto_file, out_dir.join(mod_name));
         mod_file_content.push_str(&format!("pub mod {mod_name};\n"));
+    }
+    mod_file_content.push_str("\n// Synthetic protos for tests\n");
+    for (proto_file, mod_name) in test_files {
+        generate_proto(proto_file, out_dir.join(mod_name));
+        mod_file_content.push_str(&format!("#[cfg(test)]\npub mod {mod_name};\n"));
     }
 
     let mod_file_name = out_dir.join("mod.rs");
