@@ -6,6 +6,13 @@
 
 ### Other
 
+## 2.2.1
+
+### Features :tada:
+
+- pass-common (and pass-mobile and pass-web): Add bulk methods for proto serialization
+- pass-types: Improve update logic for better handling of unknown fields
+
 ## 2.2.0
 
 ### Features :tada:
