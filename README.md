@@ -19,6 +19,7 @@ For every function added to the library, we need to:
 3. Add the required UniFFI annotations and mobile wrapper code in `proton-pass-mobile/src`.
 4. Add it to the `proton-pass-mobile/src/lib.rs` file, calling the `proton-pass-common` function.
 5. Add it to the `proton-pass-web/src/lib.rs` file, marking it as `#[wasm_bindgen]` and calling the `proton-pass-common` function.
+   Each web module (`worker`, `ui`, `cxf`, …) is a separate wasm built from its `web_*` feature in `proton-pass-web/Cargo.toml`. `worker` is loaded when the web clients boot, so keep it to what they need there and gate on-demand features behind their own module.
 
 ### Running the tests
 
@@ -72,6 +73,20 @@ In order to generate a new release, please follow these steps:
 4. If the steps look alright to you, run again `cargo release [major|minor|patch] --workspace --execute`.
 5. Create a tag using `git tag <VERSION_NUMBER>`.
 6. Push the changes and the tag.
+
+#### Addendum: Bazel after a release
+
+`cargo release` bumps the version in `Cargo.toml` and `Cargo.lock`, and Bazel reads both: the crate version comes from
+`Cargo.toml`, and `MODULE.bazel.lock` records a hash of `Cargo.lock`. CI runs Bazel with `--lockfile_mode=error`, so
+the build fails until the lockfile is refreshed. No BUILD file hardcodes the version, so this is the only change:
+
+1. Right after the release commit (before step 5's tag, so the tag includes it), run
+   `bazel mod deps --lockfile_mode=update`.
+2. Check that `git diff` shows only `MODULE.bazel.lock` changed, then commit it (e.g. `chore: update bazel lockfile`).
+3. Verify with `bazel mod deps --lockfile_mode=error` (no error) and, optionally, that
+   `bazel build --config=ci //proton-pass-web:dist` produces packages with the new `"version"` in their `package.json`.
+
+The same refresh is needed whenever `Cargo.lock` changes (new or updated crates). See `bazel/README.md`.
 
 ### Formatting
 
