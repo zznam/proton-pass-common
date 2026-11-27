@@ -66,44 +66,39 @@ where
             return Ok("".to_string());
         }
 
-        let dictionary = get_dictionary(spec);
-        match spec.length {
-            // We don't allow to generate passwords with less than 3, so we will just do a
-            // best-effort policy here
-            1..=3 => {
-                let mut password = String::new();
-                for _ in 0..spec.length {
-                    password.push(self.get_char(&dictionary)?);
-                }
-                Ok(password)
-            }
-            _ => {
-                let mut password = String::new();
-                for _ in 0..spec.length - 3 {
-                    password.push(self.get_char(&dictionary)?);
-                }
+        let characters: Vec<char> = get_dictionary(spec).chars().collect();
+        let length = spec.length as usize;
 
-                if spec.uppercase_letters && !contains_capital_letters(&password) {
-                    password.push(self.get_char(CAPITAL_LETTERS)?);
-                } else {
-                    password.push(self.get_char(&dictionary)?);
-                }
-
-                if spec.numbers && !contains_numbers(&password) {
-                    password.push(self.get_char(NUMBERS)?);
-                } else {
-                    password.push(self.get_char(&dictionary)?);
-                }
-
-                if spec.symbols && !contains_symbols(&password) {
-                    password.push(self.get_char(SYMBOLS)?);
-                } else {
-                    password.push(self.get_char(&dictionary)?);
-                }
-
-                Ok(password)
-            }
+        let mut password = String::new();
+        let mut previous: Option<char> = None;
+        let free_count = if length < 4 { length } else { length - 3 };
+        for _ in 0..free_count {
+            let c = self.get_char_excluding(&characters, previous)?;
+            password.push(c);
+            previous = Some(c);
         }
+
+        if length < 4 {
+            return Ok(password);
+        }
+
+        let required = [
+            (spec.uppercase_letters, CAPITAL_LETTERS),
+            (spec.numbers, NUMBERS),
+            (spec.symbols, SYMBOLS),
+        ];
+        for (enabled, kind) in required {
+            let c = if enabled && !contains_list(kind, &password) {
+                let kind_chars: Vec<char> = kind.chars().collect();
+                self.get_char_excluding(&kind_chars, previous)?
+            } else {
+                self.get_char_excluding(&characters, previous)?
+            };
+            password.push(c);
+            previous = Some(c);
+        }
+
+        Ok(password)
     }
 
     pub fn generate_passphrase(&mut self, spec: &PassphraseConfig) -> Result<String> {
@@ -143,6 +138,30 @@ where
         Ok(char)
     }
 
+    fn get_char_excluding(&mut self, chars: &[char], previous: Option<char>) -> Result<char> {
+        let position = previous.and_then(|p| chars.iter().position(|c| *c == p));
+        let idx = match position {
+            Some(p) => {
+                if chars.len() < 2 {
+                    return Err(PasswordGeneratorError::FailToGenerate(
+                        "No character available that differs from the previous one".to_string(),
+                    ));
+                }
+                let idx = self.rng.random_range(0..chars.len() - 1);
+                if idx >= p { idx + 1 } else { idx }
+            }
+            None => {
+                if chars.is_empty() {
+                    return Err(PasswordGeneratorError::FailToGenerate(
+                        "Could not get char from dictionary".to_string(),
+                    ));
+                }
+                self.rng.random_range(0..chars.len())
+            }
+        };
+        Ok(chars[idx])
+    }
+
     fn get_word(&mut self) -> Result<String> {
         let range = 0..EFF_LARGE_WORDLIST.len();
         let idx = self.rng.random_range(range);
@@ -165,18 +184,6 @@ where
         }
         Ok(res)
     }
-}
-
-fn contains_capital_letters(haystack: &str) -> bool {
-    contains_list(CAPITAL_LETTERS, haystack)
-}
-
-fn contains_numbers(haystack: &str) -> bool {
-    contains_list(NUMBERS, haystack)
-}
-
-fn contains_symbols(haystack: &str) -> bool {
-    contains_list(SYMBOLS, haystack)
 }
 
 fn contains_list(list: &str, haystack: &str) -> bool {
@@ -238,7 +245,7 @@ mod test {
                 })
                 .unwrap();
 
-            assert_eq!("91d8n", res);
+            assert_eq!("90d8n", res);
         }
 
         #[test]
@@ -253,7 +260,7 @@ mod test {
                 })
                 .unwrap();
 
-            assert_eq!("ZMeXt", res);
+            assert_eq!("ZMeXs", res);
         }
 
         #[test]
@@ -268,7 +275,7 @@ mod test {
                 })
                 .unwrap();
 
-            assert_eq!("*zd&n", res);
+            assert_eq!("*zc&m", res);
         }
 
         #[test]
@@ -299,6 +306,65 @@ mod test {
                 .unwrap();
 
             assert_eq!("*T0%", res);
+        }
+
+        fn assert_no_consecutive(password: &str) {
+            let chars: Vec<char> = password.chars().collect();
+            assert!(
+                chars.windows(2).all(|w| w[0] != w[1]),
+                "consecutive characters in {password}"
+            );
+        }
+
+        #[test]
+        fn generated_passwords_have_no_consecutive_characters() {
+            let mut generator = PasswordGenerator::new(seeded_rng());
+            for length in 1..=64 {
+                for _ in 0..50 {
+                    let res = generator
+                        .generate_random(&RandomPasswordConfig {
+                            length,
+                            numbers: false,
+                            uppercase_letters: false,
+                            symbols: false,
+                        })
+                        .unwrap();
+                    assert_eq!(length as usize, res.chars().count());
+                    assert_no_consecutive(&res);
+                }
+            }
+            for length in 4..=64 {
+                for _ in 0..50 {
+                    let res = generator
+                        .generate_random(&RandomPasswordConfig {
+                            length,
+                            numbers: true,
+                            uppercase_letters: true,
+                            symbols: true,
+                        })
+                        .unwrap();
+                    assert_eq!(length as usize, res.chars().count());
+                    assert_no_consecutive(&res);
+                    assert!(contains_list(CAPITAL_LETTERS, &res));
+                    assert!(contains_list(NUMBERS, &res));
+                    assert!(contains_list(SYMBOLS, &res));
+                }
+            }
+        }
+
+        #[test]
+        fn generates_long_password_without_consecutive_characters() {
+            let mut generator = PasswordGenerator::new(seeded_rng());
+            let res = generator
+                .generate_random(&RandomPasswordConfig {
+                    length: 100,
+                    numbers: false,
+                    uppercase_letters: false,
+                    symbols: false,
+                })
+                .unwrap();
+            assert_eq!(100, res.chars().count());
+            assert_no_consecutive(&res);
         }
     }
 

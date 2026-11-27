@@ -1,3 +1,8 @@
+use passkey_types::webauthn::AuthenticatedPublicKeyCredential;
+use proton_pass_common::passkey::{
+    AndroidAppOrigin, AuthenticateWithPasskeyAndroidAppRequest, generate_passkey_for_android_app,
+    resolve_challenge_for_android_app,
+};
 use proton_pass_common::passkey::{
     AuthenticatePasskeyPrfIosValues, AuthenticateWithPasskeyIosRequest, AuthenticateWithPasskeyIosResponse,
     CreatePasskeyIosRequest, CreatePasskeyPrfInput, CreatePasskeyPrfValues, CreatePasskeyResponse, PasskeyResult,
@@ -439,4 +444,151 @@ async fn with_related_origin_fetcher() {
         proton_pass_common::passkey::generate_passkey_for_domain("https://aliexpress.com", request, false, fetcher)
             .await;
     assert!(result.is_ok(), "Should succeed with related-origin fetcher: {result:?}");
+}
+
+const ANDROID_APP_EXPECTED_ORIGIN: &str = "android:apk-key-hash:4OHi4-Tl5ufo6err7O3u7_Dx8vP09fb3-Pn6-_z9_v8";
+
+fn android_app(rp_id: &str) -> AndroidAppOrigin {
+    AndroidAppOrigin {
+        package_name: "com.example.app".to_string(),
+        sha256_cert_fingerprint: (0xE0..=0xFF).collect(),
+        rp_id: rp_id.to_string(),
+    }
+}
+
+fn generate_android_app_passkey(app: &AndroidAppOrigin, input: &str) -> PasskeyResult<CreatePasskeyResponse> {
+    get_runtime().block_on(generate_passkey_for_android_app(app, input, WebauthnFetcher::new(None)))
+}
+
+fn client_data_origin(client_data_json: &[u8]) -> String {
+    let client_data: serde_json::Value = serde_json::from_slice(client_data_json).expect("Valid client data JSON");
+    client_data["origin"].as_str().expect("Origin is a string").to_string()
+}
+
+#[test]
+fn android_app_registration_uses_apk_key_hash_origin() {
+    let app = android_app("webauthn.io");
+
+    let res = generate_android_app_passkey(&app, EXAMPLE_JSON).expect("Should generate passkey");
+
+    assert_eq!(
+        client_data_origin(&res.credential.response.client_data_json),
+        ANDROID_APP_EXPECTED_ORIGIN
+    );
+    assert_eq!(res.domain, "webauthn.io");
+    assert_eq!(res.rp_id.as_deref(), Some("webauthn.io"));
+}
+
+#[test]
+fn android_app_authentication_uses_apk_key_hash_origin() {
+    let app = android_app("webauthn.io");
+    let created = generate_android_app_passkey(&app, EXAMPLE_JSON).expect("Should generate passkey");
+
+    let request = AuthenticateWithPasskeyAndroidAppRequest {
+        app,
+        request: r#"{"challenge":"Rnm5npHqYiIxZSD0cAMeXrBMQzlgiomT90D3IsnwObQ","rpId":"webauthn.io"}"#.to_string(),
+        passkey: created.passkey,
+    };
+    let response = get_runtime()
+        .block_on(resolve_challenge_for_android_app(request, WebauthnFetcher::new(None)))
+        .expect("Should authenticate");
+
+    let credential: AuthenticatedPublicKeyCredential =
+        serde_json::from_str(&response).expect("Response should be a credential");
+    assert_eq!(
+        client_data_origin(&credential.response.client_data_json),
+        ANDROID_APP_EXPECTED_ORIGIN
+    );
+}
+
+#[test]
+fn android_app_registration_rejects_rp_id_not_matching_request() {
+    assert!(generate_android_app_passkey(&android_app("example.com"), EXAMPLE_JSON).is_err());
+}
+
+#[test]
+fn android_app_registration_rejects_public_suffix_rp_id() {
+    let input = EXAMPLE_JSON.replace(r#""id":"webauthn.io""#, r#""id":"github.io""#);
+
+    assert!(generate_android_app_passkey(&android_app("github.io"), &input).is_err());
+}
+
+#[test]
+fn android_app_registration_rejects_short_fingerprint() {
+    let mut app = android_app("webauthn.io");
+    app.sha256_cert_fingerprint.pop();
+
+    assert!(generate_android_app_passkey(&app, EXAMPLE_JSON).is_err());
+}
+
+fn creation_json_with_algorithms(algs: &[i64]) -> String {
+    let params: Vec<String> = algs
+        .iter()
+        .map(|alg| format!(r#"{{"alg":{alg},"type":"public-key"}}"#))
+        .collect();
+    format!(
+        r#"{{"attestation":"none","authenticatorSelection":{{"residentKey":"preferred","userVerification":"preferred"}},"challenge":"D-5y7y_E4V8NQBJrFnnhd7NCvRGhO5sBGwzfh23y8D4a_hSMyRRuTAp0hmSm6_eimM71XoYF84VUiY8e9kqavA","excludeCredentials":[],"pubKeyCredParams":[{}],"rp":{{"id":"webauthn.io","name":"webauthn.io"}},"user":{{"displayName":"uyguyhj","id":"ZFhsbmRYbG9hZw","name":"uyguyhj"}}}}"#,
+        params.join(",")
+    )
+}
+
+const WEBAUTHN_IO_AUTH: &str = r#"{"challenge":"Rnm5npHqYiIxZSD0cAMeXrBMQzlgiomT90D3IsnwObQ","rpId":"webauthn.io"}"#;
+
+#[test]
+fn registration_with_ml_dsa_is_usable() {
+    for alg in [-48, -49, -50] {
+        let input = creation_json_with_algorithms(&[alg, -7]);
+        let created = generate_passkey("https://webauthn.io", &input).expect("should register");
+
+        authenticate_with_passkey("https://webauthn.io", &created.passkey, WEBAUTHN_IO_AUTH)
+            .expect("passkey should be usable for login");
+    }
+}
+
+#[test]
+fn registration_follows_relying_party_preference_for_ml_dsa() {
+    let input = creation_json_with_algorithms(&[-48, -7]);
+    let created = generate_passkey("https://webauthn.io", &input).expect("should register");
+    assert_eq!(created.credential.response.public_key_algorithm, -48);
+}
+
+#[test]
+fn registration_with_fully_specified_algorithms_is_usable() {
+    for alg in [-9, -19] {
+        let input = creation_json_with_algorithms(&[alg]);
+        let created = generate_passkey("https://webauthn.io", &input).expect("should register");
+        assert_eq!(created.credential.response.public_key_algorithm, alg);
+
+        authenticate_with_passkey("https://webauthn.io", &created.passkey, WEBAUTHN_IO_AUTH)
+            .expect("passkey should be usable for login");
+    }
+}
+
+#[test]
+fn registration_follows_relying_party_preference_for_fully_specified_algorithms() {
+    for (algs, expected) in [
+        (vec![-9, -7], -9),
+        (vec![-7, -9], -7),
+        (vec![-19, -8], -19),
+        (vec![-8, -19], -8),
+    ] {
+        let input = creation_json_with_algorithms(&algs);
+        let created = generate_passkey("https://webauthn.io", &input).expect("should register");
+        assert_eq!(created.credential.response.public_key_algorithm, expected);
+    }
+}
+
+#[test]
+fn registration_with_only_unsupported_algorithms_fails() {
+    let input = creation_json_with_algorithms(&[-257, -35]);
+    assert!(generate_passkey("https://webauthn.io", &input).is_err());
+}
+
+#[test]
+fn registration_with_eddsa_is_usable() {
+    let input = creation_json_with_algorithms(&[-8]);
+    let created = generate_passkey("https://webauthn.io", &input).expect("should register");
+
+    authenticate_with_passkey("https://webauthn.io", &created.passkey, WEBAUTHN_IO_AUTH)
+        .expect("passkey should be usable for login");
 }

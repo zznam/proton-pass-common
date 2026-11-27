@@ -4,7 +4,47 @@
 
 ### Fixes :bug:
 
+## 2.4.2
+
 ### Other
+
+- pass-common: URL patterns without a path match any path, as on web
+
+### Other
+
+## 2.4.1
+
+### Features :tada:
+
+- pass-common: improve support for passkey algorithms
+- pass-common: upgrade to `jiff 1` to use a stable datetime library
+
+## 2.4.0
+
+### Features :tada:
+
+- pass-common: offer method for advanced URL matching.
+- pass-mobile: expose method for advanced URL matching.
+- pass-web: expose method for advanced URL matching.
+
+## 2.3.5
+
+### Features :tada:
+
+- pass-common: offer android-specific passkey methods
+- pass-mobile: expose android-specific passkey methods
+
+## 2.3.4
+
+### Other
+
+- pass-common: random password generator now won't generate passwords with consecutive characters
+
+## 2.3.3
+
+### Other
+
+- General dependency updates
 
 ## 2.3.2
 
